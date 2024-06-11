@@ -1,7 +1,7 @@
 class FppModule:
-    module_name = ""
 
     def __init__(self, module_name):
+        self.module_name = ""
         self.module_name = module_name
 
     def open(self):
@@ -9,13 +9,23 @@ class FppModule:
 
     def close(self):
         return "}"
+    
+class FppConstant:
+    def __init__(self, constant_name, constant_value):
+        self.constant_name = ""
+        self.constant_value = ""
+        
+        self.constant_name = constant_name
+        self.constant_value = constant_value
+
+    def write(self):
+        return f"constant {self.constant_name} = {self.constant_value}"
 
 
 class FppTopology:
-    topology_name = ""
-    module_name = ""
-
     def __init__(self, topology_name):
+        self.topology_name = ""
+        
         self.topology_name = topology_name
 
     def open(self):
@@ -26,8 +36,6 @@ class FppTopology:
 
 
 class FppInstanceSpec:
-    instance_name = ""
-
     def __init__(self, instance_name):
         self.instance_name = instance_name
 
@@ -36,8 +44,6 @@ class FppInstanceSpec:
 
 
 class FppConnectionGraph:
-    connection_graph_name = ""
-
     def __init__(self, connection_graph_name):
         self.connection_graph_name = connection_graph_name
 
@@ -52,8 +58,6 @@ class FppConnectionGraph:
 
 
 class FppImport:
-    import_name = ""
-
     def __init__(self, import_name):
         self.import_name = import_name
 
@@ -62,27 +66,27 @@ class FppImport:
 
 
 class FppInstance:
-    instance_name = ""
-    instance_details = {
-        "instaceOf": "",
-        "base_id": "",
-        "queueSize": "",
-        "stackSize": "",
-        "cpu": "",
-        "priority": "",
-        "phases": {
-            "configObjects": None,
-            "configComponents": None,
-            "readParameters": None,
-            "configConstants": None,
-            "tearDownComponents": None,
-            "startTasks": None,
-            "stopTasks": None,
-            "freeThreads": None,
-        },
-    }
-
     def __init__(self, instance_name, instance_details):
+        self.instance_name = ""
+        self.instance_details = {
+            "instaceOf": "",
+            "base_id": "",
+            "queueSize": "",
+            "stackSize": "",
+            "cpu": "",
+            "priority": "",
+            "phases": {
+                "configObjects": None,
+                "configComponents": None,
+                "readParameters": None,
+                "configConstants": None,
+                "tearDownComponents": None,
+                "startTasks": None,
+                "stopTasks": None,
+                "freeThreads": None,
+            },
+        }
+        
         self.instance_name = instance_name
         self.instance_details = instance_details
 

@@ -462,8 +462,6 @@ def qualifier_calculator(qualifier_JSON):
     if "ExprDot" in next_idx:
         path += (
             qualifier_calculator(next_idx["ExprDot"])
-            + "."
-            + next_idx["ExprDot"]["id"]["AstNode"]["data"]
         )
     elif "ExprIdent" in next_idx:
         path += next_idx["ExprIdent"]["value"]

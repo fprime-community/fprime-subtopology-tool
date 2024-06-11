@@ -7,7 +7,7 @@ import utils as Utils
 import shutil
 import copy
 
-FPP_FILES_LOCATED_IN = "../ex3-ac"
+FPP_FILES_LOCATED_IN = "../example/fpp-src"
 TOPOLOGIES_TO_INSTANTIATE = []
 
 
@@ -104,7 +104,7 @@ def visitFppFile(path):
 
 def load_locs():
     # open example-locs.fpp
-    with open("example-locs.fpp", "r") as f:
+    with open("../example/fpp-src/example-locs.fpp", "r") as f:
         lines = f.readlines()
 
     locations = {
@@ -251,8 +251,12 @@ def generateFppFile(toRebuild, topology_in):
     if len(toRebuild["components"]) > 0:
         localModule = FppWriter.FppModule(f"__{topology_to_generate}_instances")
         fileContent += localModule.open() + "\n"
+        
+        # write base id
+        fileContent += FppWriter.FppConstant("LOCAL_BASE_ID", topology_in['baseID']).write() + "\n"
 
         for component in toRebuild["components"]:
+            component.instance_elements["base_id"] += "+ LOCAL_BASE_ID"
             fileContent += component.write() + "\n"
 
         fileContent += localModule.close() + "\n"
@@ -281,7 +285,7 @@ def generateFppFile(toRebuild, topology_in):
     fileContent += moduleClosures
 
     Utils.writeFppFile(
-        f"{topology_to_generate}.{topology_in['topology'].split('.')[-1]}.fpp",
+        f"../example/output/{topology_to_generate}.{topology_in['topology'].split('.')[-1]}.fpp",
         fileContent,
     )
 
@@ -290,7 +294,7 @@ def getFppFiles():
     fpp_files = []
     for root, dirs, files in os.walk(FPP_FILES_LOCATED_IN):
         for file in files:
-            if file.endswith(".fpp"):
+            if file.endswith(".fpp") and "locs.fpp" not in file:
                 fpp_files.append(os.path.join(root, file))
     return fpp_files
 

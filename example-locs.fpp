@@ -1,8 +1,0 @@
-locate topology st.st at "../ex3-ac/st.fpp"
-locate topology main.main at "../ex3-ac/main.fpp"
-locate instance st.a at "../ex3-ac/st.fpp"
-locate instance st.b at "../ex3-ac/st.fpp"
-locate instance st.c at "../ex3-ac/st.fpp"
-locate instance main.main_a at "../ex3-ac/main.fpp"
-locate instance main.b at "../ex3-ac/main.fpp"
-locate instance main.main_c at "../ex3-ac/main.fpp"
