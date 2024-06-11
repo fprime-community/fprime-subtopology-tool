@@ -5,87 +5,286 @@ import fpp_writer as FppWriter
 import json
 import utils as Utils
 import shutil
+import copy
 
 FPP_FILES_LOCATED_IN = "../ex3-ac"
-
-LOCALLY_DEFINED_INSTANCES = []
 TOPOLOGIES_TO_INSTANTIATE = []
+
 
 def walkModule(data, oldQf):
     module = Parser.ModuleParser(data)
     module.parse()
-    
+
     if oldQf == "":
         qf = module.module_name
     else:
-        qf = oldQf + "." + module.module_name # qualifier
-    
+        qf = oldQf + "." + module.module_name  # qualifier
+
     for member in module.members():
         if "DefComponentInstance" in member[1]:
             instance = Parser.InstanceParser(member)
             instance.parse()
-            
-            isLocal = Utils.component_to_local(instance)
-            if isLocal:
-                isLocal['qf'] = qf
-                LOCALLY_DEFINED_INSTANCES.append(isLocal)
-        
+
+            # isLocal = Utils.component_to_local(instance)
+            # if isLocal:
+            #     isLocal['qf'] = qf
+            #     LOCALLY_DEFINED_INSTANCES.append(isLocal)
+
         if "DefTopology" in member[1]:
             walkTopology(member, qf)
-            
+
         if "DefModule" in member[1]:
             walkModule(member, qf)
-            
+
     return qf
-            
+
 
 def walkTopology(data, module):
     topology = Parser.TopologyParser(data)
     topology.parse()
-    
+
     if module == "":
         qf = topology.topology_name
     else:
-        qf = module + "." + topology.topology_name # qualifier
-    
+        qf = module + "." + topology.topology_name  # qualifier
+
     isInstantiable = Utils.topology_to_instance(topology)
-    
+
     if isInstantiable:
-        isInstantiable['qf'] = qf
+        isInstantiable["qf"] = qf
         TOPOLOGIES_TO_INSTANTIATE.append(isInstantiable)
-        
+
     for member in topology.members():
         if "DefTopology" in member[1]:
             walkTopology(member, qf)
-            
+
         if "DefModule" in member[1]:
             walkModule(member, qf)
-    
+
     return qf
 
-def visitFppFile(path):
+
+def openFppFile(path):
     # create temporary dir
     try:
         os.mkdir("tmp")
         os.chdir("tmp")
     except FileExistsError:
         os.chdir("tmp")
-    
+
     fpp.fpp_to_json("../" + path)
-    
+
     # parse json
     with open("fpp-ast.json", "r") as f:
         AST = json.load(f)
-        
-    for i in range(len(AST[0]['members'])):
-        if "DefModule" in AST[0]['members'][i][1]:
-            walkModule(AST[0]['members'][i], "")
-            
-        if "DefTopology" in AST[0]['members'][i][1]:
-            walkTopology(AST[0]['members'][i], "")
-        
+
     os.chdir("..")
     shutil.rmtree("tmp", ignore_errors=True)
+
+    return AST
+
+
+def visitFppFile(path):
+
+    AST = openFppFile(path)
+
+    for i in range(len(AST[0]["members"])):
+        if "DefModule" in AST[0]["members"][i][1]:
+            walkModule(AST[0]["members"][i], "")
+
+        if "DefTopology" in AST[0]["members"][i][1]:
+            walkTopology(AST[0]["members"][i], "")
+
+    if len(TOPOLOGIES_TO_INSTANTIATE) > 0:
+        for topology in TOPOLOGIES_TO_INSTANTIATE:
+            topology_to_instance(topology)
+
+    TOPOLOGIES_TO_INSTANTIATE.clear()
+
+
+def load_locs():
+    # open example-locs.fpp
+    with open("example-locs.fpp", "r") as f:
+        lines = f.readlines()
+
+    locations = {
+        "topologies": [],
+        "instances": [],
+    }
+
+    for line in lines:
+        idx = ""
+        if "topology" in line:
+            idx = "topologies"
+        elif "instance" in line:
+            idx = "instances"
+
+        # remove quotations and newline
+        line = line.replace('"', "").replace("\n", "")
+
+        locations[idx].append(
+            {
+                "name": line.split(" ")[2],
+                "location": line.split(" ")[-1],
+            }
+        )
+
+    return locations
+
+
+def find_in_locs(locs, type, name):
+    for item in locs[type]:
+        if item["name"] == name:
+            return item["location"]
+    return None
+
+
+def topology_to_instance(topology_in):
+    topology = topology_in["topology_class"]
+    toRebuild = {"imports": [], "instances": [], "connections": [], "components": []}
+
+    locations = load_locs()
+    topology_file = find_in_locs(locations, "topologies", topology_in["topology"])
+    topology_file = openFppFile(topology_file)
+
+    st_Class = Utils.module_walker(
+        topology_file[0]["members"],
+        topology_in["topology"],
+        "DefTopology",
+        Parser.TopologyParser,
+    )
+
+    for member in st_Class.members():
+        if "SpecCompInstance" in member[1]:
+            instance = Parser.InstanceSpecParser(member)
+            instance.parse()
+            toRebuild["instances"].append(instance)
+
+        if "SpecConnectionGraph" in member[1]:
+            connection = Parser.ConnectionGraphParser(member)
+            connection.parse()
+            toRebuild["connections"].append(connection)
+
+        if "SpecTopImport" in member[1]:
+            imp = Parser.TopologyImport(member)
+            imp.parse()
+            toRebuild["imports"].append(imp)
+
+    numReplaced = 0
+    toRebuild["locals"] = []
+    for instance in toRebuild["instances"]:
+        preannot = instance.instance_preannot
+        replaced = False
+        isLocal = False
+
+        if preannot is not None and len(preannot) > 0:
+            if "! is local" == preannot[0]:
+                isLocal = True
+                for replacement in topology_in["instanceReplacements"]:
+                    if instance.instance_name in replacement["toReplace"]:
+                        numReplaced = numReplaced + 1
+                        instance.instance_name = replacement["replacer"]
+                        replaced = True
+                        break
+
+        if not replaced and isLocal:
+            toRebuild["locals"].append(instance.instance_name)
+
+    if numReplaced != len(topology_in["instanceReplacements"]):
+        print(
+            f"[ERR] Failed to replace all instances in topology {topology_in['topology']}"
+        )
+        return None
+
+    for instance in toRebuild["instances"]:
+        if instance.instance_name in toRebuild["locals"]:
+            instance_file = find_in_locs(locations, "instances", instance.instance_name)
+            instance_file = openFppFile(instance_file)
+
+            toRebuild["components"].append(
+                Utils.module_walker(
+                    instance_file[0]["members"],
+                    instance.instance_name,
+                    "DefComponentInstance",
+                    Parser.InstanceParser,
+                )
+            )
+
+    for connections in toRebuild["connections"]:
+        for connection in connections.cg_connections:
+            source = ".".join(connection["source"]["name"].split(".")[:-1])
+            sourcePort = connection["source"]["name"].split(".")[-1]
+
+            dest = ".".join(connection["dest"]["name"].split(".")[:-1])
+            destPort = connection["dest"]["name"].split(".")[-1]
+
+            for instance in topology_in["instanceReplacements"]:
+                if source == instance["toReplace"]:
+                    source = instance["replacer"]
+
+                if dest == instance["toReplace"]:
+                    dest = instance["replacer"]
+
+                if source in toRebuild["locals"]:
+                    source = f"__{topology_in['qf'].split('.')[-1]}_instances.{source.split('.')[-1]}"
+
+                if dest in toRebuild["locals"]:
+                    dest = f"__{topology_in['qf'].split('.')[-1]}_instances.{dest.split('.')[-1]}"
+
+            connection["source"]["name"] = source + "." + sourcePort
+            connection["dest"]["name"] = dest + "." + destPort
+
+    generateFppFile(toRebuild, topology_in)
+
+
+def generateFppFile(toRebuild, topology_in):
+    modules_to_generate = topology_in["qf"].split(".")
+    topology_to_generate = modules_to_generate.pop()
+
+    fileContent = ""
+    moduleClosures = ""
+
+    for module in modules_to_generate:
+        fileContent += FppWriter.FppModule(module).open() + "\n"
+        moduleClosures += FppWriter.FppModule(module).close() + "\n"
+
+    if len(toRebuild["components"]) > 0:
+        localModule = FppWriter.FppModule(f"__{topology_to_generate}_instances")
+        fileContent += localModule.open() + "\n"
+
+        for component in toRebuild["components"]:
+            fileContent += component.write() + "\n"
+
+        fileContent += localModule.close() + "\n"
+
+    fileContent += (
+        FppWriter.FppModule(topology_in["topology"].split(".")[-1]).open() + "\n"
+    )
+
+    fileContent += FppWriter.FppTopology(topology_to_generate).open() + "\n"
+
+    if len(toRebuild["imports"]) > 0:
+        for imp in toRebuild["imports"]:
+            fileContent += imp.write() + "\n"
+
+    if len(toRebuild["instances"]) > 0:
+        for instance in toRebuild["instances"]:
+            if instance.instance_name in toRebuild["locals"]:
+                instance.instance_name = f"__{topology_to_generate}_instances.{instance.instance_name.split('.')[-1]}"
+            fileContent += instance.write() + "\n"
+
+    if len(toRebuild["connections"]) > 0:
+        for connection in toRebuild["connections"]:
+            fileContent += connection.write() + "\n"
+
+    fileContent += "}\n}\n"
+    fileContent += moduleClosures
+
+    Utils.writeFppFile(
+        f"{topology_to_generate}.{topology_in['topology'].split('.')[-1]}.fpp",
+        fileContent,
+    )
+
 
 def getFppFiles():
     fpp_files = []
@@ -95,13 +294,12 @@ def getFppFiles():
                 fpp_files.append(os.path.join(root, file))
     return fpp_files
 
+
 def main():
     files = getFppFiles()
     for file in files:
         visitFppFile(file)
-        
-    print(LOCALLY_DEFINED_INSTANCES)
-    print(TOPOLOGIES_TO_INSTANTIATE)
-    
+
+
 if __name__ == "__main__":
     main()
