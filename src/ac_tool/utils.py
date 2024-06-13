@@ -194,3 +194,12 @@ def writeFppFile(file, content):
     except:
         print("[ERR] fpp-format failed")
         sys.exit(1)
+        
+# quickly check if a file has magic annotations
+def quickFileScan(path):
+    with(open(path, "r")) as f:
+        lines = f.readlines()
+        for line in lines:
+            if "@!" in line or "@<!" in line:
+                return True
+    return False

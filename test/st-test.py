@@ -37,13 +37,16 @@ def run_test_ex(num):
     with open("out.ref.fpp", "r") as f:
         ref = f.read()
         
+    tf = False
     if out == ref:
-        assert True
+        tf = True
     else:
-        assert False
+        tf = False
         
     os.remove("out.out.fpp")
     os.chdir("..")
+    
+    assert tf
     
 def test_ex1():
     run_test_ex(1)

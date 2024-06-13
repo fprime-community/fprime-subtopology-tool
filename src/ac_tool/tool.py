@@ -334,6 +334,9 @@ def main():
         FPP_OUTPUT = os.path.abspath(FPP_OUTPUT)
     
     try:
+        if not Utils.quickFileScan(parsed.f):
+            raise Exception("File does not contain magic annotations")
+        
         visitFppFile(parsed.f)
         if len(TOPOLOGIES_TO_INSTANTIATE) > 0:
             for topology in TOPOLOGIES_TO_INSTANTIATE:
