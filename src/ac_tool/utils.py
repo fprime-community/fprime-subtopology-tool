@@ -114,14 +114,16 @@ def topology_to_instance(topology: Parser.TopologyParser):
                             )
 
                     if error:
-                        return print(
-                            f"[ERR] Topology {topology.topology_name} has an invalid postannotation"
+                        print(
+                            f"[ERR] Topology instance {topology.topology_name} has an invalid magic annotation"
                         )
+                        # we NEED to hard exit
+                        sys.exit(1)
                     if not endBracket:
-                        return print(
-                            f"[ERR] Expected }} to close magic annotation but found end of postannotation"
+                        print(
+                            f"[ERR] Expected }} to close magic annotation of ${topology.topology_name} instance but found nothing."
                         )
-                        
+                        sys.exit(1)
     return instanceDetails
 
 
@@ -178,9 +180,7 @@ def writeFppFile(file, content):
         directory = file[: file.rfind("/")]
         if not os.path.exists(directory):
             os.makedirs(directory)
-            
-    print(directory)
-    
+                
     with open(file, "w") as f:
         f.write(content)
 

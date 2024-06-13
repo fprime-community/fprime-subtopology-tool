@@ -5,11 +5,11 @@ import fpp_writer as FppWriter
 import json
 import utils as Utils
 import shutil
-import copy
+import argparse
+import sys
 
-FPP_FILES_LOCATED_IN = "../example/fpp-src"
 TOPOLOGIES_TO_INSTANTIATE = []
-
+WRITTEN_FILE_PIECES = []
 
 def walkModule(data, oldQf):
     module = Parser.ModuleParser(data)
@@ -24,11 +24,6 @@ def walkModule(data, oldQf):
         if "DefComponentInstance" in member[1]:
             instance = Parser.InstanceParser(member)
             instance.parse()
-
-            # isLocal = Utils.component_to_local(instance)
-            # if isLocal:
-            #     isLocal['qf'] = qf
-            #     LOCALLY_DEFINED_INSTANCES.append(isLocal)
 
         if "DefTopology" in member[1]:
             walkTopology(member, qf)
@@ -66,20 +61,31 @@ def walkTopology(data, module):
 
 def openFppFile(path):
     # create temporary dir
-    try:
-        os.mkdir("tmp")
-        os.chdir("tmp")
-    except FileExistsError:
-        os.chdir("tmp")
+    
+    # get directory of path without file
+    # check if path is absolute
+    if not os.path.isabs(path):
+        path = os.path.abspath(path)
+        
+    pathDir = os.path.dirname(path)
+        
+    if not os.path.exists(pathDir + "/tmp"):
+        try:
+            os.mkdir(pathDir + "/tmp")
+        except OSError:
+            print ("Creation of the directory %s failed" % pathDir + "/tmp")
+            sys.exit(1)
+        
+    os.chdir(pathDir + "/tmp")
 
-    fpp.fpp_to_json("../" + path)
+    fpp.fpp_to_json(path)
 
     # parse json
     with open("fpp-ast.json", "r") as f:
         AST = json.load(f)
 
-    os.chdir("..")
-    shutil.rmtree("tmp", ignore_errors=True)
+    os.chdir(pathDir)
+    shutil.rmtree("./tmp", ignore_errors=True)
 
     return AST
 
@@ -95,16 +101,12 @@ def visitFppFile(path):
         if "DefTopology" in AST[0]["members"][i][1]:
             walkTopology(AST[0]["members"][i], "")
 
-    if len(TOPOLOGIES_TO_INSTANTIATE) > 0:
-        for topology in TOPOLOGIES_TO_INSTANTIATE:
-            topology_to_instance(topology)
-
-    TOPOLOGIES_TO_INSTANTIATE.clear()
+    return 1
 
 
 def load_locs():
     # open example-locs.fpp
-    with open("../example/fpp-src/example-locs.fpp", "r") as f:
+    with open(FPP_LOCS, "r") as f:
         lines = f.readlines()
 
     locations = {
@@ -114,18 +116,26 @@ def load_locs():
 
     for line in lines:
         idx = ""
-        if "topology" in line:
+        if "topology" in line.split(" ")[1]:
             idx = "topologies"
-        elif "instance" in line:
+        elif "instance" in line.split(" ")[1]:
             idx = "instances"
+        else:
+            continue
 
         # remove quotations and newline
         line = line.replace('"', "").replace("\n", "")
+        
+        location = line.split(" ")[-1]
+        
+        # check if location is absolute
+        if not os.path.isabs(location):
+            location = os.path.abspath(location)
 
         locations[idx].append(
             {
                 "name": line.split(" ")[2],
-                "location": line.split(" ")[-1],
+                "location": location,
             }
         )
 
@@ -192,9 +202,9 @@ def topology_to_instance(topology_in):
 
     if numReplaced != len(topology_in["instanceReplacements"]):
         print(
-            f"[ERR] Failed to replace all instances in topology {topology_in['topology']}"
+            f"[ERR] Failed to replace all component instances in topology instance {topology_in['qf']}. You may have tried to alis an instance that does not exist or is not local to {topology_in['topology']}."
         )
-        return None
+        sys.exit(1)
 
     for instance in toRebuild["instances"]:
         if instance.instance_name in toRebuild["locals"]:
@@ -283,27 +293,71 @@ def generateFppFile(toRebuild, topology_in):
 
     fileContent += "}\n}\n"
     fileContent += moduleClosures
-
-    Utils.writeFppFile(
-        f"../example/output/{topology_to_generate}.{topology_in['topology'].split('.')[-1]}.fpp",
-        fileContent,
-    )
-
-
-def getFppFiles():
-    fpp_files = []
-    for root, dirs, files in os.walk(FPP_FILES_LOCATED_IN):
-        for file in files:
-            if file.endswith(".fpp") and "locs.fpp" not in file:
-                fpp_files.append(os.path.join(root, file))
-    return fpp_files
+    
+    WRITTEN_FILE_PIECES.append(fileContent)
 
 
 def main():
-    files = getFppFiles()
-    for file in files:
-        visitFppFile(file)
+    print("[HELLO] Subtopology autocoder called.")
+    parser = argparse.ArgumentParser(description="Generate FPP files for subtopologies")
+    parser.add_argument(
+        "--locs",
+        help="location of locs.fpp file",
+        required=True
+    )
+    
+    parser.add_argument(
+        "--f",
+        "--file",
+        help="fpp file to process",
+        required=True
+    )
+    
+    parser.add_argument(
+        "--p",
+        "--path",
+        help="path to output directory",
+        required=True
+    )
+    
+    parsed, _ = parser.parse_known_args()
+    
+    global FPP_LOCS
+    global FPP_OUTPUT
+    FPP_LOCS = parsed.locs
+    FPP_OUTPUT = parsed.p
+    
+    if not os.path.isabs(FPP_LOCS):
+        FPP_LOCS = os.path.abspath(FPP_LOCS)
+        
+    if not os.path.isabs(FPP_OUTPUT):
+        FPP_OUTPUT = os.path.abspath(FPP_OUTPUT)
+    
+    try:
+        visitFppFile(parsed.f)
+        if len(TOPOLOGIES_TO_INSTANTIATE) > 0:
+            for topology in TOPOLOGIES_TO_INSTANTIATE:
+                topology_to_instance(topology)
+        else:
+            raise Exception("No topologies to instantiate")
+                
+        try:
+            Utils.writeFppFile(
+                f"{FPP_OUTPUT}",
+                '\n'.join(WRITTEN_FILE_PIECES),
+            )
+        except Exception as e:
+            raise Exception(f"Failed to write final subtopologies file: {e}")
+
+        TOPOLOGIES_TO_INSTANTIATE.clear()
+        FPP_LOCS = ""
+        
+        print(f"[DONE] file {parsed.f} processed successfully by subtopology ac")
+    except Exception as e:
+        print(f"[ERR] {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
+    
