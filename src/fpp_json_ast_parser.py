@@ -1,4 +1,46 @@
-class ModuleParser:
+"""
+===================== BASE CLASSES =====================
+"""
+
+class QualifyingElements:
+    """
+    Base class for all AST parser classes that represent a qualifying element in the AST.
+    This means both modules and topologies.
+    
+    open() and close() are abstract methods that must be implemented by the child class.
+    They open the element and close the element, respectively. For example, for a module,
+    
+    open() should return "module <module_name> {"
+    close() should return "}"
+    """
+    
+    def __init__(self): pass
+    def parse(self): pass
+    def open(self): pass
+    def close(self): pass
+    def members(self): pass
+    
+class ValueElements:
+    """
+    Base class for all AST parser classes that represent a value-holding element 
+    in the AST. This means constants, instance specifications, instances, ports, and 
+    connection graphs.
+    
+    write() is an abstract method that must be implemented by the child class. It
+    should return the string representation of the element. For example, for a constant,
+    
+    write() should return "constant <constant_name> = <constant_value>"
+    """
+    
+    def __init__(self): pass
+    def parse(self): pass
+    def write(self): pass
+    
+"""
+===================== ACTUAL AST PARSER CLASSES =====================
+"""
+
+class ModuleParser(QualifyingElements):
     def __init__(self, module_JSON_list):
         self.module_JSON = {}
         self.module_name = None
@@ -26,7 +68,7 @@ class ModuleParser:
         return self.module_JSON["DefModule"]["node"]["AstNode"]["data"]["members"]
 
 
-class ConstantParser:
+class ConstantParser(ValueElements):
     def __init__(self, constant_JSON_list, skip_annots=False):
         self.constant_JSON = {}
         self.constant_Id = None
@@ -58,7 +100,7 @@ class ConstantParser:
         return f"constant {self.constant_Id} = {self.constant_value}"
 
 
-class InstanceSpecParser:
+class InstanceSpecParser(ValueElements):
     def __init__(self, instance_JSON_list):
         self.instance_JSON = {}
         self.instance_name = None
@@ -98,7 +140,7 @@ class InstanceSpecParser:
         return f"{self.instance_visibility} instance {self.instance_name}"
 
 
-class InstanceParser:
+class InstanceParser(ValueElements):
     def __init__(self, instance_JSON_list):
         self.instance_JSON = {}
         self.instance_name = None
@@ -108,6 +150,7 @@ class InstanceParser:
             "queue": None,
             "stack": None,
             "priority": None,
+            "cpu": None,
             "phases": {
                 "configObjects": None,
                 "configComponents": None,
@@ -238,7 +281,32 @@ class InstanceParser:
                 self.instance_elements["priority"] = qualifier_calculator(
                     priority_JSON["ExprDot"]
                 )
+                
+        if (
+            "cpu"
+            in self.instance_JSON["DefComponentInstance"]["node"]["AstNode"]["data"]
+        ):
+            self.instance_elements["cpu"] = self.instance_JSON[
+                "DefComponentInstance"
+            ]["node"]["AstNode"]["data"]["cpu"]
+            
+            if (
+                self.instance_elements["cpu"] is not None
+                and self.instance_elements["cpu"] != "None"
+            ):
+                cpu_JSON = self.instance_elements["cpu"]["Some"]["AstNode"]["data"]
 
+                if "ExprLiteralInt" in cpu_JSON:
+                    self.instance_elements["cpu"] = cpu_JSON["ExprLiteralInt"][
+                        "value"
+                    ]
+                elif "ExprIdent" in cpu_JSON:
+                    self.instance_elements["cpu"] = cpu_JSON["ExprIdent"]["value"]
+                elif "ExprDot" in cpu_JSON:
+                    self.instance_elements["cpu"] = qualifier_calculator(
+                        cpu_JSON["ExprDot"]
+                    )
+                    
         self.parse_phases()
 
     def writePhases(self):
@@ -287,7 +355,7 @@ class InstanceParser:
         return part_1 + self.writePhases()
 
 
-class PortParser:
+class PortParser(ValueElements):
     def __init__(self, port_JSON_list):
         self.port_JSON = {}
         self.port_name = None
@@ -326,7 +394,7 @@ class PortParser:
         return f"port {self.port_name}(\n    {portParams}\n)"
 
 
-class TopologyImport:
+class TopologyImport(ValueElements):
     def __init__(self, import_JSON_list):
         self.import_JSON = {}
         self.import_name = None
@@ -350,7 +418,7 @@ class TopologyImport:
         return f"import {self.import_name}\n"
 
 
-class ConnectionGraphParser:
+class ConnectionGraphParser(ValueElements):
     def __init__(self, cg_JSON_list):
         self.cg_JSON = {}
         self.cg_name = None
@@ -421,7 +489,7 @@ class ConnectionGraphParser:
             self.cg_connections.append(connectionToAppend)
 
 
-class TopologyParser:
+class TopologyParser(QualifyingElements):
     def __init__(self, topology_JSON_list):
         self.topology_JSON = {}
         self.topology_name = None

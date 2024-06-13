@@ -1,9 +1,22 @@
 import fpp_json_ast_parser as Parser
 import fpp_interface as fpp
 import sys
+import os
 
 
 def component_to_local(component: Parser.InstanceParser):
+    """
+    This function checks if a component is local to the topology it is defined in based on
+    the instance definition in the topology. In the current version of the tool, this
+    function is not used.
+    
+    Args:
+        component: The component to check if it is local to the topology
+    
+    Returns:
+        None
+    """
+    
     preannotation = component.instance_preannot
     if preannotation is None or preannotation == "" or preannotation == []:
         return
@@ -30,7 +43,7 @@ def topology_to_instance(topology: Parser.TopologyParser):
         return
     else:
         if "!" != postannotation[0][0]:
-            return print(f"[ERR] Topology {topology.topology_name} is not special")
+            return print(f"[WARN] Topology {topology.topology_name} does not contain magic annotations")
         else:
             pass
 
@@ -62,7 +75,7 @@ def topology_to_instance(topology: Parser.TopologyParser):
                 for i in range(1, len(postannotation)):
                     if "!" != postannotation[i][0]:
                         print(
-                            f"[ERR] Expected ! to start the special annotation but found {postannotation[i]}"
+                            f"[ERR] Expected ! to start the magic annotation but found {postannotation[i]}"
                         )
                         error = True
                     else:
@@ -106,14 +119,27 @@ def topology_to_instance(topology: Parser.TopologyParser):
                     )
                 if not endBracket:
                     return print(
-                        f"[ERR] Expected }} to close postannotation but found end of postannotation"
+                        f"[ERR] Expected }} to close magic annotation but found end of postannotation"
                     )
 
     return instanceDetails
 
 
-# locate a qualifier in a module
 def module_walker(AST, qf, type, type_parser):
+    """
+    This function walks through the JSON AST of a module and returns the AST for a
+    specific element type with the qualified name qf.
+    
+    Args:
+        AST: The JSON AST of the module
+        qf: The qualified name of the element to find (i.e. module.member.member)
+        type: The type of element to find (i.e. DefTopology, DefComponentInstance)
+        type_parser: The parser for the element type (i.e. Parser.TopologyParser)
+        
+    Returns:
+        The AST for the element with the qualified name qf
+    """
+    
     qf = qf.split(".")
     for m in AST:
         if "DefModule" in m[1]:
@@ -136,6 +162,23 @@ def module_walker(AST, qf, type, type_parser):
 
 # write (with formatting) to fpp file
 def writeFppFile(file, content):
+    """
+    This function writes content to a file and formats the file using fpp-format.
+    
+    Args:
+        file: The file to write to (i.e. /path/to/file.fpp)
+        content: The content to write to the file
+        
+    Returns:
+        None
+    """
+    
+    # check if the directory exists
+    if "/" in file:
+        directory = file[: file.rfind("/")]
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+    
     with open(file, "w") as f:
         f.write(content)
 

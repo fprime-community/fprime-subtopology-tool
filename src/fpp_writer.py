@@ -127,8 +127,8 @@ class FppInstance:
         ):
             part += f"\\ \n    stack size {self.instance_details['stackSize']}"
 
-        # if self.instance_details['cpu'] and self.instance_details['cpu'] != "":
-        #     part += f"\\ \n    cpu {self.instance_details['cpu']}"
+        if self.instance_details['cpu'] and self.instance_details['cpu'] != "":
+            part += f"\\ \n    cpu {self.instance_details['cpu']}"
 
         if (
             self.instance_details["priority"]
