@@ -65,7 +65,7 @@ def openFppFile(path):
     # get directory of path without file
     pathDir = os.path.abspath(path)
     pathDir = os.path.dirname(path)
-    
+        
     try:
         os.mkdir(pathDir + "/tmp")
         os.chdir(pathDir + "/tmp")
@@ -79,7 +79,7 @@ def openFppFile(path):
         AST = json.load(f)
 
     os.chdir(pathDir)
-    shutil.rmtree("tmp", ignore_errors=True)
+    shutil.rmtree("./tmp", ignore_errors=True)
 
     return AST
 
@@ -110,18 +110,29 @@ def load_locs():
 
     for line in lines:
         idx = ""
-        if "topology" in line:
+        if "topology" in line.split(" ")[1]:
             idx = "topologies"
-        elif "instance" in line:
+        elif "instance" in line.split(" ")[1]:
             idx = "instances"
+        else:
+            continue
 
         # remove quotations and newline
         line = line.replace('"', "").replace("\n", "")
+        
+        locationRelative = line.split(" ")[-1]
+        
+        # turn relative path into absolute path
+        # get directory of FPP_LOCS without file
+        FPP_LOCS_DIR = os.path.abspath(FPP_LOCS)
+        FPP_LOCS_DIR = os.path.dirname(FPP_LOCS_DIR)
+        
+        locationAbsolute = FPP_LOCS_DIR + "/" + locationRelative
 
         locations[idx].append(
             {
                 "name": line.split(" ")[2],
-                "location": line.split(" ")[-1],
+                "location": locationAbsolute,
             }
         )
 
@@ -318,11 +329,12 @@ def main():
         if len(TOPOLOGIES_TO_INSTANTIATE) > 0:
             for topology in TOPOLOGIES_TO_INSTANTIATE:
                 topology_to_instance(topology)
+        else:
+            raise Exception("No topologies to instantiate")
                 
         try:
-            topology_to_generate = parsed.f.split("/")[-1].split(".")[0]
             Utils.writeFppFile(
-                f"{FPP_OUTPUT}/{topology_to_generate}.subtopologies.fpp",
+                f"{FPP_OUTPUT}",
                 '\n'.join(WRITTEN_FILE_PIECES),
             )
         except Exception as e:

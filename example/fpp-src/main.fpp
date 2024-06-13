@@ -8,9 +8,7 @@ module main {
         queue size Defaults.QUEUE_SIZE
     
     topology MyST {}
-    @<! is st.st base id 0xCCCC with {
-    @<!   st.c = main.b
-    @<! }
+    @<! is st.st base id 0xCCCC
 
     topology main {
         import st.MyST

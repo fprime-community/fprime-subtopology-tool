@@ -1,32 +1,20 @@
-module main {
+module MainDeployment {
 
-  module __MyST_instances {
+  module RNGTopology {
 
-    constant LOCAL_BASE_ID = 0xCCCC
+    topology TestingTopology {
 
-    instance b: Components.B base id 0x2000 + LOCAL_BASE_ID \
-      queue size stConfig.Defaults.QUEUE_SIZE \
-      stack size stConfig.Defaults.STACK_SIZE \
-      priority stConfig.Priorities.b \
-      {
-        phase Fpp.ToCpp.Phases.configObjects "std::cout << \"testing\" << std::endl;"
-      }
+      instance inputs
 
-  }
+      instance outputs
 
-  module st {
+      instance rng
 
-    topology MyST {
+      instance rateGroup
 
-      instance st.a
-
-      instance __MyST_instances.b
-
-      instance main.b
-
-      connections Testing {
-        st.a.pout -> __MyST_instances.b.pin
-        __MyST_instances.b.pout -> main.b.pin
+      connections Interface {
+        inputs.clock -> rng.run
+        rng.rngVal -> outputs.RNGValue
       }
 
     }
