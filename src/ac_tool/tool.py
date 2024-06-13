@@ -298,6 +298,18 @@ def generateFppFile(toRebuild, topology_in):
 
 
 def main():
+    """
+    Entry point to the tool. Uses argparse to parse command line arguments.
+    
+    Args:
+        --loca [path]:      path to locs.fpp file
+        --f, --file [path]: path to file to check for subtopology instances
+        --p, --path [path]: path to the output file
+        
+    Return:
+        If no subtopology instances in the given file, an exception will be raised
+        Otherwise, there will be a proper sys.exit(0)
+    """
     print("[HELLO] Subtopology autocoder called.")
     parser = argparse.ArgumentParser(description="Generate FPP files for subtopologies")
     parser.add_argument(
