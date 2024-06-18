@@ -31,6 +31,10 @@ def run_test_ex(num):
         print(f"[ERR] {e}")
         return
     
+    with open("st-locs.fpp", "r") as f:
+        with open("out.out.fpp", "a") as out:
+            out.write(f.read())
+    
     # compare out.out.fpp and out.ref.fpp
     with open("out.out.fpp", "r") as f:
         out = f.read()
@@ -44,6 +48,7 @@ def run_test_ex(num):
         tf = False
         
     os.remove("out.out.fpp")
+    os.remove("st-locs.fpp")
     os.chdir("..")
     
     assert tf

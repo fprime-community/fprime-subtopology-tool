@@ -102,3 +102,27 @@ def fpp_format(input_file):
     except subprocess.CalledProcessError as e:
         print(f"[ERR] fpp-format failed with error: {e}")
         return 1
+    
+def fpp_locate_defs(input_file, locs_file):
+    """
+    This function runs fpp-locate-defs on an fpp file to locate definitions.
+    
+    Args:
+        input_file: The input fpp file to run fpp-locate-defs on
+        locs_file:  The locs.fpp file used to find the base directory to base def locations
+                    off of
+    """
+
+    print(f"[fpp] Running fpp-locate-defs for {input_file}...")
+    
+    locs_file = os.path.abspath(locs_file)
+    base_dir = os.path.dirname(locs_file)
+    
+    try:
+        fppLocateDefs = subprocess.run(
+            ["fpp-locate-defs", input_file, "-d", base_dir], check=True, stdout=subprocess.PIPE
+        )
+        return fppLocateDefs.stdout.decode("utf-8")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERR] fpp-locate-defs failed with error: {e}")
+        return 1

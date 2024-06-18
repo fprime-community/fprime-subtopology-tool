@@ -363,6 +363,18 @@ def main():
             )
         except Exception as e:
             raise Exception(f"Failed to write final subtopologies file: {e}")
+        
+        try:
+            newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
+            dirOfOutput = os.path.dirname(FPP_OUTPUT)
+            
+            Utils.writeFppFile(
+                f"{dirOfOutput}/st-locs.fpp",
+                newLocs,
+            )
+        except Exception as e:
+            raise Exception(f"Failed to write new locs file: {e}")
+            
 
         TOPOLOGIES_TO_INSTANTIATE.clear()
         FPP_LOCS = ""
