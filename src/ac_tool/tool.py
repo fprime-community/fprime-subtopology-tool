@@ -431,7 +431,6 @@ def main():
         print(f"[DONE] file {parsed.f} processed successfully by subtopology ac")
     except Exception as e:
         print(f"[MESSAGE] {e}")
-        raise
         sys.exit(1)
 
 

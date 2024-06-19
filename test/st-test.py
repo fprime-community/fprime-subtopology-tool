@@ -47,8 +47,8 @@ def run_test_ex(num):
     else:
         tf = False
         
-    # os.remove("out.out.fpp")
-    # os.remove("st-locs.fpp")
+    os.remove("out.out.fpp")
+    os.remove("st-locs.fpp")
     os.chdir("..")
     
     assert tf
