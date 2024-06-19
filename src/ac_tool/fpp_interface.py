@@ -3,7 +3,7 @@ import subprocess
 import os
 
 
-def calculateDependencies(input_file, locs_file) -> str:
+def fpp_depend(cache_folder, input_file, locs_files) -> str:
     """
     This function calculates the dependencies for an fpp file using fprime-util to get
     the location of the build cache fpp-depend.
@@ -16,45 +16,35 @@ def calculateDependencies(input_file, locs_file) -> str:
         A string of dependencies for the input file
     """
     
-    # run fprime-util info
     print(f"[fpp] Calculating fpp dependencies for {input_file}...")
 
     try:
-        fprimeUtil = subprocess.run(
-            ["fprime-util", "info"], check=True, stdout=subprocess.PIPE
-        )
-        buildCache = fprimeUtil.stdout.decode("utf-8").split(" ")[-1].strip()
-
-        # check if build cache is valid
-        if not buildCache:
-            raise subprocess.CalledProcessError(1, "fprime-util info")
-        elif not buildCache.startswith("/"):
-            raise ValueError("Invalid build cache path")
-        elif not os.path.exists(buildCache):
-            raise FileNotFoundError("Build cache does not exist")
-
-        print(f"[fpp] Using build cache: {buildCache}")
-    except subprocess.CalledProcessError as e:
-        print(f"[ERR] fprime-util info failed with error: {e}")
-        return 1
-    
-    # run fpp-depend
-    dependencies = None
-    try:
         fppDep = subprocess.run(
-            ["fpp-depend", locs_file, input_file],
+            ["fpp-depend", input_file] + locs_files + [
+                "-d",
+                f"{cache_folder}/direct.txt",
+                "-m",
+                f"{cache_folder}/missing.txt",
+                "-f",
+                f"{cache_folder}/framework.txt",
+                "-g",
+                f"{cache_folder}/generated.txt",
+                "-i",
+                f"{cache_folder}/include.txt",
+                "-u",
+                f"{cache_folder}/unittest.txt",
+                "-a"
+            ],
             check=True,
             stdout=subprocess.PIPE,
         )
-        if not fppDep.stdout:
-            print("[INFO] No dependencies found for input file")
-        else:
-            dependencies = ",".join(fppDep.stdout.decode("utf-8").split("\n"))[:-1]
+        
+        with open(f"{cache_folder}/stdout.txt", "w") as f:
+            f.write(fppDep.stdout.decode("utf-8"))
+            
     except subprocess.CalledProcessError as e:
         print(f"[ERR] fpp-depend failed with error: {e}")
         return 1
-
-    return dependencies
 
 
 def fpp_to_json(input_file):

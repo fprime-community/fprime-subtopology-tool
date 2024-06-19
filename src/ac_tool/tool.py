@@ -7,6 +7,7 @@ import utils as Utils
 import shutil
 import argparse
 import sys
+from pathlib import Path
 
 TOPOLOGIES_TO_INSTANTIATE = []
 WRITTEN_FILE_PIECES = []
@@ -60,20 +61,17 @@ def walkTopology(data, module):
 
 
 def openFppFile(path):
-    # create temporary dir
-    
-    # get directory of path without file
-    # check if path is absolute
+    print(path)
     if not os.path.isabs(path):
-        path = os.path.abspath(path)
+        path = Path(path).resolve()
         
     pathDir = os.path.dirname(path)
-        
+            
     if not os.path.exists(pathDir + "/tmp"):
         try:
             os.mkdir(pathDir + "/tmp")
-        except OSError:
-            print ("Creation of the directory %s failed" % pathDir + "/tmp")
+        except OSError as e:
+            print ("Creation of the directory %s failed" % (pathDir + "/tmp"))
             sys.exit(1)
         
     os.chdir(pathDir + "/tmp")
@@ -127,11 +125,11 @@ def load_locs():
         line = line.replace('"', "").replace("\n", "")
         
         location = line.split(" ")[-1]
-        
+                
         # check if location is absolute
         if not os.path.isabs(location):
-            location = os.path.abspath(location)
-
+            location = Path(FPP_LOCS).parent / location
+            
         locations[idx].append(
             {
                 "name": line.split(" ")[2],
@@ -208,8 +206,12 @@ def topology_to_instance(topology_in):
 
     for instance in toRebuild["instances"]:
         if instance.instance_name in toRebuild["locals"]:
-            instance_file = find_in_locs(locations, "instances", instance.instance_name)
-            instance_file = openFppFile(instance_file)
+            try:
+                instance_file = find_in_locs(locations, "instances", instance.instance_name)
+                instance_file = openFppFile(instance_file)
+            except Exception as e:
+                print(f"[ERR] Failed to open instance file location for {instance.instance_name}. This most likely means that your instance is not properly qualified in your file.")
+                sys.exit(1)
 
             toRebuild["components"].append(
                 Utils.module_walker(
@@ -234,7 +236,8 @@ def topology_to_instance(topology_in):
 
                 if dest == instance["toReplace"]:
                     dest = instance["replacer"]
-
+            
+            for instance in toRebuild["instances"]:
                 if source in toRebuild["locals"]:
                     source = f"__{topology_in['qf'].split('.')[-1]}_instances.{source.split('.')[-1]}"
 
@@ -244,12 +247,25 @@ def topology_to_instance(topology_in):
             connection["source"]["name"] = source + "." + sourcePort
             connection["dest"]["name"] = dest + "." + destPort
 
+    if topology_in["configReplacement"]['from'] != "" and topology_in["configReplacement"]['to'] != "":
+        toRebuild = Utils.replaceConfig(topology_in["configReplacement"], toRebuild)
+
     generateFppFile(toRebuild, topology_in)
 
 
 def generateFppFile(toRebuild, topology_in):
     modules_to_generate = topology_in["qf"].split(".")
     topology_to_generate = modules_to_generate.pop()
+    
+    if not IN_TEST:
+        cleaned = Utils.cleanMainFppFile(FPP_INPUT, topology_to_generate)
+    
+        if not cleaned:
+            print(f"[ERR] Failed to clean main fpp file {FPP_INPUT}: {topology_to_generate} was not found.")
+            sys.exit(1)
+    
+    print(f"[INFO] Generating subtopology {modules_to_generate}")
+
 
     fileContent = ""
     moduleClosures = ""
@@ -272,7 +288,7 @@ def generateFppFile(toRebuild, topology_in):
         fileContent += localModule.close() + "\n"
 
     fileContent += (
-        FppWriter.FppModule(topology_in["topology"].split(".")[-1]).open() + "\n"
+        FppWriter.FppModule("local").open() + "\n"
     )
 
     fileContent += FppWriter.FppTopology(topology_to_generate).open() + "\n"
@@ -302,9 +318,10 @@ def main():
     Entry point to the tool. Uses argparse to parse command line arguments.
     
     Args:
-        --loca [path]:      path to locs.fpp file
-        --f, --file [path]: path to file to check for subtopology instances
-        --p, --path [path]: path to the output file
+        --locs [path]:          path to locs.fpp file
+        --f, --file [path]:     path to file to check for subtopology instances
+        --p, --path [path]:     path to the output file
+        --c, --cache [path]:    path to the fpp cache folder
         
     Return:
         If no subtopology instances in the given file, an exception will be raised
@@ -332,18 +349,43 @@ def main():
         required=True
     )
     
+    parser.add_argument(
+        "--c",
+        "--cache",
+        help="path to fpp cache folder",
+        required=False
+    )
+    
+    parser.add_argument(
+        "--t",
+        "--test",
+        help="bypasses dependency management for testing",
+        action=argparse.BooleanOptionalAction
+    )
+    
     parsed, _ = parser.parse_known_args()
     
     global FPP_LOCS
     global FPP_OUTPUT
+    global FPP_CACHE
+    global FPP_INPUT
+    global IN_TEST
+    
     FPP_LOCS = parsed.locs
     FPP_OUTPUT = parsed.p
+    FPP_CACHE = parsed.c
+    FPP_INPUT = parsed.f
+    IN_TEST = parsed.t or False
     
     if not os.path.isabs(FPP_LOCS):
-        FPP_LOCS = os.path.abspath(FPP_LOCS)
+        FPP_LOCS = Path(FPP_LOCS).resolve()
         
     if not os.path.isabs(FPP_OUTPUT):
-        FPP_OUTPUT = os.path.abspath(FPP_OUTPUT)
+        FPP_OUTPUT = Path(FPP_OUTPUT).resolve()
+     
+    if not IN_TEST:   
+        if not os.path.isabs(FPP_CACHE):
+            FPP_CACHE = Path(FPP_CACHE).resolve()
     
     try:
         if not Utils.quickFileScan(parsed.f):
@@ -365,6 +407,7 @@ def main():
             raise Exception(f"Failed to write final subtopologies file: {e}")
         
         try:
+            print("GOT HERE")
             newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
             dirOfOutput = os.path.dirname(FPP_OUTPUT)
             
@@ -374,14 +417,21 @@ def main():
             )
         except Exception as e:
             raise Exception(f"Failed to write new locs file: {e}")
+        
+        if not IN_TEST:    
+            Utils.updateDependencies(FPP_CACHE, FPP_OUTPUT, [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"])
             
-
         TOPOLOGIES_TO_INSTANTIATE.clear()
+        WRITTEN_FILE_PIECES.clear()
         FPP_LOCS = ""
+        FPP_OUTPUT = ""
+        FPP_CACHE = ""
+        FPP_INPUT = ""
         
         print(f"[DONE] file {parsed.f} processed successfully by subtopology ac")
     except Exception as e:
-        print(f"[ERR] {e}")
+        print(f"[MESSAGE] {e}")
+        raise
         sys.exit(1)
 
 

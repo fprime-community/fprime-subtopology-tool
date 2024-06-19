@@ -2,7 +2,7 @@ import fpp_json_ast_parser as Parser
 import fpp_interface as fpp
 import sys
 import os
-
+import shutil
 
 def component_to_local(component: Parser.InstanceParser):
     """
@@ -53,6 +53,10 @@ def topology_to_instance(topology: Parser.TopologyParser):
         "topology": "",
         "baseID": "",
         "instanceReplacements": [],
+        "configReplacement": {
+            "from": "",
+            "to": ""
+        }
     }
 
     if "is" == instantiation[0]:
@@ -108,10 +112,14 @@ def topology_to_instance(topology: Parser.TopologyParser):
                                 replacer = replacer[:commaExists]
                             else:
                                 expectBracket = True
-
-                            instanceDetails["instanceReplacements"].append(
-                                {"toReplace": toReplace, "replacer": replacer}
-                            )
+                                
+                            if "Config" in toReplace:
+                                instanceDetails["configReplacement"]["from"] = toReplace
+                                instanceDetails["configReplacement"]["to"] = replacer
+                            else:
+                                instanceDetails["instanceReplacements"].append(
+                                    {"toReplace": toReplace, "replacer": replacer}
+                                )
 
                     if error:
                         print(
@@ -197,11 +205,110 @@ def writeFppFile(file, content):
         
     return file
         
-# quickly check if a file has magic annotations
 def quickFileScan(path):
+    """
+    Quickly check if a file has magic annotations
+    """
+    
     with(open(path, "r")) as f:
         lines = f.readlines()
         for line in lines:
             if "@!" in line or "@<!" in line:
                 return True
     return False
+
+def updateDependencies(fpp_cache, path, locs: list):
+    """
+    This function updates the dependency cache files for a module. This tells the future 
+    autocoder what the dependencies are for the new subtopology we made.
+    
+    Args:
+        fpp_cache: The path to the fpp cache directory
+        path: Path to the fpp file to calculate dependencies for
+        locs: List of locs files to use for dependency calculation
+    """
+    
+    try:
+        os.mkdir(fpp_cache + "/tmp")
+        
+        fpp.fpp_depend(fpp_cache + "/tmp", path, locs)
+        
+        dependencyFiles = ['direct.txt', 'framework.txt', 'generated.txt', 'include.txt', 'unittest.txt', 'stdout.txt']
+        
+        for file in dependencyFiles:
+            with open(fpp_cache + "/tmp/" + file, "r") as f:
+                with open(fpp_cache + "/" + file, "a") as out:
+                    for line in f:
+                        # if ".subtopologies.fpp" in line:
+                        #     continue
+                        
+                        with open(fpp_cache + "/" + file, "r") as check:
+                            if line in check:
+                                continue
+                            
+                        out.write(line)
+                    
+        shutil.rmtree(fpp_cache + "/tmp", ignore_errors=True)
+        
+        print("[INFO] Updated dependency cache files")
+    except Exception as e:
+        print(f"[ERR] Failed to update dependency cache files: {e}")
+        sys.exit(1)
+    
+    return 1
+
+def cleanMainFppFile(path, topology):
+    """
+    Clean up the artifact of the topology in the main fpp file
+    """
+    
+    with open(path, "r") as f:
+        lines = f.readlines()
+        
+    removingTopology = False
+    removedTopology = False
+    for i in range(len(lines)):
+        if f"topology {topology}" in lines[i]:
+            lines[i] = ""
+            removingTopology = True
+            removedTopology = True
+            continue
+
+        if removingTopology and "@<!" in lines[i]:
+            lines[i] = ""
+            continue
+            
+        if removingTopology and lines[i] == "":
+            removingTopology = False
+            continue
+            
+    with open(path, "w") as f:
+        f.writelines(lines)            
+    
+    if removedTopology:
+        return 1
+    else:
+        return 0
+    
+def replaceConfig(replacement, toRebuild):
+    cFrom = replacement["from"]
+    cTo = replacement["to"]
+    
+    for component in toRebuild['components']:
+        elements = component['instance_elements']
+        if cFrom in elements['base_id']:
+            component['instance_elements']['base_id'].replace(cFrom, cTo)
+            
+        if cFrom in elements['queue']:
+            component['instance_elements']['queue'].replace(cFrom, cTo)
+            
+        if cFrom in elements['stack']:
+            component['instance_elements']['stack'].replace(cFrom, cTo)
+            
+        if cFrom in elements['cpu']:
+            component['instance_elements']['cpu'].replace(cFrom, cTo)
+            
+        if cFrom in elements['priority']:
+            component['instance_elements']['priority'].replace(cFrom, cTo)
+
+    return toRebuild

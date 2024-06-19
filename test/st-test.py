@@ -25,7 +25,7 @@ def run_test_ex(num):
     
     # Run the ac-tool
     try:
-        cmdArgs = ["python3", "../../src/ac_tool/tool.py", "--locs", "locs.fpp", "--f", "main.fpp", "--p", "out.out.fpp"]
+        cmdArgs = ["python3", "../../src/ac_tool/tool.py", "--locs", "locs.fpp", "--f", "main.fpp", "--p", "out.out.fpp", "--t"]
         subprocess.call(cmdArgs)
     except KeyError as e:
         print(f"[ERR] {e}")
@@ -47,8 +47,8 @@ def run_test_ex(num):
     else:
         tf = False
         
-    os.remove("out.out.fpp")
-    os.remove("st-locs.fpp")
+    # os.remove("out.out.fpp")
+    # os.remove("st-locs.fpp")
     os.chdir("..")
     
     assert tf

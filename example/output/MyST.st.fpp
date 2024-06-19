@@ -17,7 +17,7 @@ module main {
 
   }
 
-  module st {
+  module local {
 
     topology MyST {
 
