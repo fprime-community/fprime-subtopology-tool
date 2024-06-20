@@ -7,8 +7,8 @@ module main {
     instance main_c: Components.C base id 0xCD \
         queue size Defaults.QUEUE_SIZE
     
-    topology MyST {}
-    @<! is st.st base id 0xCCCC with {
+    constant MyST = {}
+    @<! is topology st.st base id 0xCCCC with {
     @<!    st.a = main.main_a    
     @<! }
 

@@ -8,12 +8,13 @@ class FppModule:
 
     def close(self):
         return "}"
-    
+
+
 class FppConstant:
     def __init__(self, constant_name, constant_value):
         self.constant_name = ""
         self.constant_value = ""
-        
+
         self.constant_name = constant_name
         self.constant_value = constant_value
 
@@ -24,7 +25,7 @@ class FppConstant:
 class FppTopology:
     def __init__(self, topology_name):
         self.topology_name = ""
-        
+
         self.topology_name = topology_name
 
     def open(self):
@@ -85,7 +86,7 @@ class FppInstance:
                 "freeThreads": None,
             },
         }
-        
+
         self.instance_name = instance_name
         self.instance_details = instance_details
 
@@ -126,7 +127,7 @@ class FppInstance:
         ):
             part += f"\\ \n    stack size {self.instance_details['stackSize']}"
 
-        if self.instance_details['cpu'] and self.instance_details['cpu'] != "":
+        if self.instance_details["cpu"] and self.instance_details["cpu"] != "":
             part += f"\\ \n    cpu {self.instance_details['cpu']}"
 
         if (

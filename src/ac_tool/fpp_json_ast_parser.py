@@ -2,43 +2,61 @@
 ===================== BASE CLASSES =====================
 """
 
+
 class QualifyingElements:
     """
     Base class for all AST parser classes that represent a qualifying element in the AST.
     This means both modules and topologies.
-    
+
     open() and close() are abstract methods that must be implemented by the child class.
     They open the element and close the element, respectively. For example, for a module,
-    
+
     open() should return "module <module_name> {"
     close() should return "}"
     """
-    
-    def __init__(self): pass
-    def parse(self): pass
-    def open(self): pass
-    def close(self): pass
-    def members(self): pass
-    
+
+    def __init__(self):
+        pass
+
+    def parse(self):
+        pass
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
+    def members(self):
+        pass
+
+
 class ValueElements:
     """
-    Base class for all AST parser classes that represent a value-holding element 
-    in the AST. This means constants, instance specifications, instances, ports, and 
+    Base class for all AST parser classes that represent a value-holding element
+    in the AST. This means constants, instance specifications, instances, ports, and
     connection graphs.
-    
+
     write() is an abstract method that must be implemented by the child class. It
     should return the string representation of the element. For example, for a constant,
-    
+
     write() should return "constant <constant_name> = <constant_value>"
     """
-    
-    def __init__(self): pass
-    def parse(self): pass
-    def write(self): pass
-    
+
+    def __init__(self):
+        pass
+
+    def parse(self):
+        pass
+
+    def write(self):
+        pass
+
+
 """
 ===================== ACTUAL AST PARSER CLASSES =====================
 """
+
 
 class ModuleParser(QualifyingElements):
     def __init__(self, module_JSON_list):
@@ -69,7 +87,7 @@ class ModuleParser(QualifyingElements):
 
 
 class ConstantParser(ValueElements):
-    def __init__(self, constant_JSON_list, skip_annots=False):
+    def __init__(self, constant_JSON_list):
         self.constant_JSON = {}
         self.constant_Id = None
         self.constant_value = None
@@ -77,12 +95,9 @@ class ConstantParser(ValueElements):
         self.constant_postannot = None
         self.qf = None
 
-        if skip_annots:
-            self.constant_JSON = constant_JSON_list
-        else:
-            self.constant_JSON_preannot = constant_JSON_list[0]
-            self.constant_JSON = constant_JSON_list[1]
-            self.constant_JSON_postannot = constant_JSON_list[2]
+        self.constant_preannot = constant_JSON_list[0]
+        self.constant_JSON = constant_JSON_list[1]
+        self.constant_postannot = constant_JSON_list[2]
 
     def parse(self):
         self.constant_Id = self.constant_JSON["DefConstant"]["node"]["AstNode"]["data"][
@@ -281,15 +296,15 @@ class InstanceParser(ValueElements):
                 self.instance_elements["priority"] = qualifier_calculator(
                     priority_JSON["ExprDot"]
                 )
-                
+
         if (
             "cpu"
             in self.instance_JSON["DefComponentInstance"]["node"]["AstNode"]["data"]
         ):
-            self.instance_elements["cpu"] = self.instance_JSON[
-                "DefComponentInstance"
-            ]["node"]["AstNode"]["data"]["cpu"]
-            
+            self.instance_elements["cpu"] = self.instance_JSON["DefComponentInstance"][
+                "node"
+            ]["AstNode"]["data"]["cpu"]
+
             if (
                 self.instance_elements["cpu"] is not None
                 and self.instance_elements["cpu"] != "None"
@@ -297,16 +312,14 @@ class InstanceParser(ValueElements):
                 cpu_JSON = self.instance_elements["cpu"]["Some"]["AstNode"]["data"]
 
                 if "ExprLiteralInt" in cpu_JSON:
-                    self.instance_elements["cpu"] = cpu_JSON["ExprLiteralInt"][
-                        "value"
-                    ]
+                    self.instance_elements["cpu"] = cpu_JSON["ExprLiteralInt"]["value"]
                 elif "ExprIdent" in cpu_JSON:
                     self.instance_elements["cpu"] = cpu_JSON["ExprIdent"]["value"]
                 elif "ExprDot" in cpu_JSON:
                     self.instance_elements["cpu"] = qualifier_calculator(
                         cpu_JSON["ExprDot"]
                     )
-                    
+
         self.parse_phases()
 
     def writePhases(self):
@@ -528,9 +541,7 @@ def qualifier_calculator(qualifier_JSON):
     path = ""
 
     if "ExprDot" in next_idx:
-        path += (
-            qualifier_calculator(next_idx["ExprDot"])
-        )
+        path += qualifier_calculator(next_idx["ExprDot"])
     elif "ExprIdent" in next_idx:
         path += next_idx["ExprIdent"]["value"]
 
