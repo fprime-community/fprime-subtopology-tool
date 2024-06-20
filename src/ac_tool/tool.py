@@ -154,7 +154,6 @@ def find_in_locs(locs, type, name):
             return item["location"]
     return None
 
-
 def topology_to_instance(topology_in):
     toRebuild = {"imports": [], "instances": [], "connections": [], "components": []}
 
@@ -276,7 +275,7 @@ def generateFppFile(toRebuild, topology_in):
 
     fileContent = ""
     moduleClosures = ""
-
+    
     for module in modules_to_generate:
         fileContent += FppWriter.FppModule(module).open() + "\n"
         moduleClosures += FppWriter.FppModule(module).close() + "\n"
