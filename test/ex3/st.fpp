@@ -17,10 +17,10 @@ module st {
     topology st {
         @! is local
         instance st.a
-
+        
+        @! is local
         instance st.b
 
-        @! is local
         instance st.c
 
         connections Testing {

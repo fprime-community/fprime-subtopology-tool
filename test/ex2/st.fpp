@@ -15,13 +15,8 @@ module st {
         queue size stConfig.Defaults.QUEUE_SIZE
 
     topology st {
-        @! is local
         instance st.a
-
-        @! is local
         instance st.b
-
-        @! is local
         instance st.c
 
         connections Testing {

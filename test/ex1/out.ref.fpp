@@ -19,7 +19,7 @@ module main {
 
   }
 
-  module local {
+  module st {
 
     topology MyST {
 
@@ -47,4 +47,4 @@ locate instance main.__MyST_instances.b at "out.out.fpp"
 
 locate instance main.__MyST_instances.c at "out.out.fpp"
 
-locate topology main.local.MyST at "out.out.fpp"
+locate topology main.st.MyST at "out.out.fpp"
