@@ -1,6 +1,6 @@
 include(autocoder/helpers)
 
-set(PYTHON_TOOL "<< FILL THIS IN >>")
+set(PYTHON_TOOL "../../ac_tool/tool.py")
 
 autocoder_setup_for_individual_sources()
 
