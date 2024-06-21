@@ -4,6 +4,12 @@
 2. [Software Requirements](#software-requirements)
 3. [Installation](#installation)
 
+## Documentation
+
+- [Syntax.md](./Syntax.md) - information about syntax in fpp files for this tool
+- [Example.md](./Example.md) - documentation for an example project that uses this tool
+- [Design.md](./Design.md) - design methodology for this tool
+
 ## Overview
 
 This tool is split into two parts: the **autocoder**, which is injected into the build process of an F Prime project, and the **tool behavior**, written in Python files. The purpose of the autocoder is to trigger the python tool on `.fpp` files in F Prime modules, while the python files are responsible for parsing the files, reconstructing subtopologies, and more.

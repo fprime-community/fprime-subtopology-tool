@@ -51,6 +51,8 @@ coverage.xml
 .pytest_cache/
 cover/
 *.out.fpp
+*.out.txt
+tmp/
 
 # Translations
 *.mo

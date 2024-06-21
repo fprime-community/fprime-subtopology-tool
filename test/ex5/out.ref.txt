@@ -1,0 +1,3 @@
+[HELLO] Subtopology autocoder called.
+[fpp] Running fpp-to-json for /Users/amosalla/JPL/348C/subtopology-ac-testing/ac-tool/test/ex5/main.fpp...
+[ERR] Expected } to close magic annotation of MyST2 instance but found nothing.
