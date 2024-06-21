@@ -2,13 +2,20 @@
 
 Before reading this file, it is recommended to take a quick glance over the [Design](./Design.md) documentation file, as it provides justification for the existence of these syntaxes.
 
+1. [In the subtopology](#in-the-subtopology)
+2. [In the main topology](#in-the-main-topology)
+3. [Examples](#examples)
+
 ## In the subtopology
 
 The only syntax in the subtopology that is valid is defining instances to be *local*. Local instances are those that are immutable, and are always defined in a subtopology. Any non-local components in a subtopology are exposed to be used in the parent topology, and they can be replaced.
 
 **Syntax**: `@! is local`
+
 **Modifiers**: None
+
 **Applies to**: instance specifications
+
 
 The following is an example of what your subtopology file may look like with local components.
 
@@ -97,4 +104,4 @@ module MainDeployment {
 
 Examples of the syntax, as well as the output files that are made by the autocoder are located in the [example](../example/) directory.
 
-The [Example]{./Example.md} documentation file walks through an example project that uses this tool.
+The [Example](./Example.md) documentation file walks through an example project that uses this tool.
