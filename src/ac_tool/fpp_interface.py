@@ -47,9 +47,22 @@ def fpp_depend(cache_folder, input_file, locs_files) -> str:
     except subprocess.CalledProcessError as e:
         print(f"[ERR] fpp-depend failed with error: {e}")
         return 1
+    
+def compute_simple_dependencies(locs_file, input):
+    try:
+        fppDep = subprocess.run(
+            ["fpp-depend", locs_file, input],
+            check=True,
+            stdout=subprocess.PIPE,
+        )
+        
+        return fppDep.stdout.decode("utf-8")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERR] fpp-depend failed with error: {e}")
+        return 1
 
 
-def fpp_to_json(input_file):
+def fpp_to_json(locs, input_file):
     """
     This function runs fpp-to-json on an fpp file to generate a JSON AST.
 
@@ -62,14 +75,29 @@ def fpp_to_json(input_file):
 
     # run fpp
     print(f"[fpp] Running fpp-to-json for {input_file}...")
+    
+    dependencies = compute_simple_dependencies(locs, input_file)
+    dependencies = dependencies.split('\n')[:-1]
+        
+    cmd = ["fpp-to-json"] + dependencies + [input_file]
+    cmdS = ['fpp-to-json', input_file, '-s']
 
     try:
         fppToJSON = subprocess.run(
-            ["fpp-to-json", input_file, "-s"], check=True, stdout=subprocess.PIPE
+            cmd, check=True, stdout=subprocess.PIPE
         )
     except subprocess.CalledProcessError as e:
-        print(f"[ERR] fpp-to-json failed with error: {e}")
+        print(f"[ERR] fpp-to-json pt1 failed with error. This part checks if you have a valid model file: {e}")
         return 1
+    
+    if fppToJSON.returncode == 0:
+        try:
+            fppToJSON = subprocess.run(
+                cmdS, check=True, stdout=subprocess.PIPE
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"[ERR] fpp-to-json pt2 failed with error. This part checks if you have a valid model file: {e}")
+            return 1
 
 
 def fpp_format(input_file):

@@ -90,13 +90,13 @@ def openFppFile(path):
             sys.exit(1)
 
     os.chdir(pathDir + "/tmp")
-
-    fpp.fpp_to_json(path)
+    
+    fpp.fpp_to_json(FPP_LOCS, path)
 
     # parse json
     with open("fpp-ast.json", "r") as f:
         AST = json.load(f)
-
+        
     os.chdir(pathDir)
     shutil.rmtree("./tmp", ignore_errors=True)
 

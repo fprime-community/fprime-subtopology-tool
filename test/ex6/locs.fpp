@@ -1,8 +1,12 @@
-locate topology st.st at "./main.fpp" # incorrect loc
+locate topology st.st at "./st.fpp"
 locate topology main.main at "./main.fpp"
-locate instance st.a at "./st.fpp"
+locate instance st.a at "./main.fpp"
 locate instance st.b at "./st.fpp"
-locate instance st.c at "./main.fpp" # incorrect loc
+locate instance st.c at "./st.fpp"
 locate instance main.main_a at "./main.fpp"
 locate instance main.b at "./main.fpp"
 locate instance main.main_c at "./main.fpp"
+locate component Components.A at "./components.fpp"
+locate component Components.B at "./components.fpp"
+locate component Components.C at "./components.fpp"
+locate port Components.P at "./components.fpp"
