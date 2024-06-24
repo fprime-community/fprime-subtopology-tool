@@ -39,8 +39,8 @@ In the main topology, we want to be able to define that we want to use our subto
 ```
 ...
 
-constant MyInstance = {}
-@<! is topology Main.ST base id 0xCCCC
+topology MyInstance {}
+@<! is Main.ST base id 0xCCCC
 
 ....
 ```
@@ -53,15 +53,15 @@ We can also add more to our magic annotations to define *instance replacements*.
 module MainDeployment {
     instance myCoolerComponent = Main.A base id 0xDDDD
 
-    constant MyInstance = {}
-    @<! is topology Main.ST base id 0xCCCC with { # opens a "list" of instance replacements
+    topology MyInstance {}
+    @<! is Main.ST base id 0xCCCC with { # opens a "list" of instance replacements
     @<!     Main.myCoolComponent = myCoolerComponent
     @<! }
 
 }
 ```
 
-These magic annotations must be tied to a constant variable; the autocoder will not find it if it is attached to any other element. However, the actual value of the constant does not matter.
+These magic annotations must be tied to a topology; the autocoder will not find it if it is attached to any other element.
 
 In the same way as above, we can also replace the config module name in the subtopology. For subtopologies, it is highly recommended that defaults (i.e., queue size) should be written into a config file, like `STConfig.fpp`. A user may want to create a new config for `MyInstance`, like `MyInstanceConfig.fpp`.
 
@@ -70,8 +70,8 @@ In the autocoder, "Config" is a reserved keyword; if the instance replacement co
 ```
 ...
 
-constant MyInstance = {}
-@<! is topology Main.ST base id 0xCCCC with {
+topology MyInstance {}
+@<! is Main.ST base id 0xCCCC with {
 @<!     Main.myCoolComponent = myCoolerComponent, # multiple instance replacements are comma separated
 @<!     STConfig = MyInstanceConfig
 @<! }
@@ -79,20 +79,20 @@ constant MyInstance = {}
 ...
 ```
 
-Lastly, to be able to import the subtopology into another topology (i.e., your main topology), the qualified path to the subtopology is `<OldTopologyName>.<NewTopologyName>`. So in our example where our old topology is named "ST" and the new topology is named "MyInstance":
+Lastly, to be able to import the subtopology into another topology (i.e., your main topology), the qualified path to the subtopology is `<NewTopologyName>`.
 
 ```
 module MainDeployment {
     instance myCoolerComponent = Main.A base id 0xDDDD
 
-    constant MyInstance = {}
-    @<! is topology Main.ST base id 0xCCCC with {
+    topology MyInstance {}
+    @<! is Main.ST base id 0xCCCC with {
     @<!     Main.myCoolComponent = myCoolerComponent,
     @<!     STConfig = MyInstanceConfig
     @<! }
 
     topology MainDeployment {
-        import ST.MyInstance
+        import MyInstance
 
         ...
     }

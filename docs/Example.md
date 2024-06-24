@@ -240,8 +240,8 @@ module MainDeployment {
 
     ...
 
-    constant Testing = {}
-    @<! is topology RNGTopology.RNG base id 0xCCCC with {
+    topology Testing {}
+    @<! is RNGTopology.RNG base id 0xCCCC with {
     @<!    hardware = MainDeployment.hardware,
     @<!    receiver = MainDeployment.receiver
     @<! }
@@ -249,7 +249,7 @@ module MainDeployment {
     ...
 
     topology MainDeployment {
-        import RNG.Testing
+        import Testing
 
         ... # make sure to hook up MainDeployment.hardware.run to a rate group's output port!
     }

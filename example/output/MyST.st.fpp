@@ -17,21 +17,17 @@ module main {
 
   }
 
-  module st {
+  topology MyST {
 
-    topology MyST {
+    instance main.main_a
 
-      instance main.main_a
+    instance __MyST_instances.b
 
-      instance __MyST_instances.b
+    instance __MyST_instances.c
 
-      instance __MyST_instances.c
-
-      connections Testing {
-        main.main_a.pout -> __MyST_instances.b.pin
-        __MyST_instances.b.pout -> __MyST_instances.c.pin
-      }
-
+    connections Testing {
+      main.main_a.pout -> __MyST_instances.b.pin
+      __MyST_instances.b.pout -> __MyST_instances.c.pin
     }
 
   }

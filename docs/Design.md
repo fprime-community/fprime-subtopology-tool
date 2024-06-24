@@ -70,5 +70,6 @@ The autocoder will parse these annotations, and produce two files within the giv
 
 - `<ModuleName>.subtopologies.fpp` - all instantiated topologies in a given F Prime module
 - `st-locs.fpp` - the location for all new defined elements (i.e. local instances, subtopologies)
+- `<ModuleName>.fpp` - a copy of the input file that has the subtopology instance syntax, with it configured properly for the build system.
 
 This is the reason why our autocoder *must* run before any of the other autocoders. In essence, our tool is a pre-processor that produces `.fpp` files that are on the level of pre-autocode (as in, autocode from fpp-to-cpp). These files are then automatically passed to the next autocoders, that process then and integrate them into the final build. 

@@ -36,15 +36,15 @@ def walkModule(data, oldQf):
         if "DefModule" in member[1]:
             walkModule(member, qf)
 
-        if "DefConstant" in member[1]:
-            constant = Parser.ConstantParser(member)
-            constant.parse()
+        # if "DefConstant" in member[1]:
+        #     constant = Parser.ConstantParser(member)
+        #     constant.parse()
 
-            isTopologyInstance = Utils.constant_to_subtopology_instance(constant)
+        #     isTopologyInstance = Utils.constant_to_subtopology_instance(constant)
 
-            if isTopologyInstance:
-                isTopologyInstance["qf"] = qf + "." + constant.constant_Id
-                TOPOLOGIES_TO_INSTANTIATE.append(isTopologyInstance)
+        #     if isTopologyInstance:
+        #         isTopologyInstance["qf"] = qf + "." + constant.constant_Id
+        #         TOPOLOGIES_TO_INSTANTIATE.append(isTopologyInstance)
 
     return qf
 
@@ -59,6 +59,12 @@ def walkTopology(data, module):
         qf = module + "." + topology.topology_name  # qualifier
 
     topology.qf = qf
+    
+    isInstantiable = Utils.topology_to_instance(topology)
+
+    if isInstantiable:
+        isInstantiable["qf"] = qf
+        TOPOLOGIES_TO_INSTANTIATE.append(isInstantiable)
 
     for member in topology.members():
         if "DefTopology" in member[1]:
@@ -272,6 +278,8 @@ def topology_to_instance(topology_in):
 def generateFppFile(toRebuild, topology_in):
     modules_to_generate = topology_in["qf"].split(".")
     topology_to_generate = modules_to_generate.pop()
+    
+    Utils.removeFromMainLocs(FPP_LOCS, topology_in['qf'])
 
     fileContent = ""
     moduleClosures = ""
@@ -296,9 +304,9 @@ def generateFppFile(toRebuild, topology_in):
 
         fileContent += localModule.close() + "\n"
 
-    fileContent += (
-        FppWriter.FppModule(topology_in["topology"].split(".")[-1]).open() + "\n"
-    )
+    # fileContent += (
+    #     FppWriter.FppModule(topology_in["topology"].split(".")[-1]).open() + "\n"
+    # )
 
     fileContent += FppWriter.FppTopology(topology_to_generate).open() + "\n"
 
@@ -316,7 +324,7 @@ def generateFppFile(toRebuild, topology_in):
         for connection in toRebuild["connections"]:
             fileContent += connection.write() + "\n"
 
-    fileContent += "}\n}\n"
+    fileContent += "}\n"
     fileContent += moduleClosures
 
     WRITTEN_FILE_PIECES.append(fileContent)
@@ -406,6 +414,12 @@ def main():
                 f"{dirOfOutput}/st-locs.fpp",
                 newLocs,
             )
+            
+            # clean up new source file
+            filename = os.path.basename(FPP_INPUT) if not IN_TEST else "main.out.fpp"
+            
+            shutil.copyfile(FPP_INPUT, f"{dirOfOutput}/{filename}")
+            Utils.cleanMainFppFile(f"{dirOfOutput}/{filename}")
         except Exception as e:
             raise Exception(f"Failed to write new locs file: {e}")
 
@@ -424,7 +438,6 @@ def main():
         print(f"[DONE] file {parsed.f} processed successfully by subtopology ac")
     except Exception as e:
         print(f"[MESSAGE] {e}")
-        raise
         sys.exit(1)
 
 
