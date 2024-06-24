@@ -1,73 +1,50 @@
-module main {
+module st {
+    instance a: Components.A base id Components.A + 0x1000 + Constant.C
 
-  module st {
+    instance b: Components.B base id 0x2000 \
+        queue size stConfig.Defaults.QUEUE_SIZE \
+        stack size stConfig.Defaults.STACK_SIZE \
+        priority stConfig.Priorities.b \
+        {
+            phase Fpp.ToCpp.Phases.configObjects """
+                std::cout << "testing" << std::endl;
+            """
+        }
 
-    topology MyST {
+    instance c: Components.C base id 0x3000 \
+        queue size stConfig.Defaults.QUEUE_SIZE
 
-      instance st.a
+    topology st {
+        instance st.a
+        instance st.b
+        instance st.c
 
-      instance st.b
-
-      instance st.c
-
-      connections Testing {
-        st.a.pout -> st.b.pin
-        st.b.pout -> st.c.pin
-      }
-
+        connections Testing {
+            st.a.pout -> st.b.pin
+            st.b.pout -> st.c.pin
+        }
     }
+}locate topology main.MyST at "out.out.fpp"
 
-  }
+locate topology main.MyST2 at "out.out.fpp"
 
-}
-
+locate topology main.MyST3 at "out.out.fpp"
 module main {
+    instance main_a: Components.A base id 0xAB
+    instance b: Components.B base id 0xBC \
+        queue size Defaults.QUEUE_SIZE \
+        stack size Defaults.STACK_SIZE \
+        priority 100
+    instance main_c: Components.C base id 0xCD \
+        queue size Defaults.QUEUE_SIZE
+    
 
-  module st {
 
-    topology MyST2 {
 
-      instance st.a
 
-      instance main.b
-
-      instance st.c
-
-      connections Testing {
-        st.a.pout -> main.b.pin
-        main.b.pout -> st.c.pin
-      }
-
+    topology main {
+        import MyST
+        import MyST2
+        import MyST3
     }
-
-  }
-
 }
-
-module main {
-
-  module st {
-
-    topology MyST3 {
-
-      instance main.main_a
-
-      instance main.b
-
-      instance main.main_c
-
-      connections Testing {
-        main.main_a.pout -> main.b.pin
-        main.b.pout -> main.main_c.pin
-      }
-
-    }
-
-  }
-
-}
-locate topology main.st.MyST at "out.out.fpp"
-
-locate topology main.st.MyST2 at "out.out.fpp"
-
-locate topology main.st.MyST3 at "out.out.fpp"

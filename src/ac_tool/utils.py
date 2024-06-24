@@ -37,35 +37,35 @@ def component_to_local(component: Parser.InstanceParser):
     return {"component": component, "linkedTopology": topology}
 
 
-def constant_to_subtopology_instance(constant: Parser.ConstantParser):
-    postannotation = constant.constant_postannot
+def topology_to_instance(topology: Parser.TopologyParser):
+    postannotation = topology.topology_postannot
 
     if postannotation is None or postannotation == []:
         return
     else:
         if "!" != postannotation[0][0]:
             return print(
-                f"[WARN] Constant {constant.constant_Id} does not contain magic annotations"
+                f"[WARN] Topology {topology.topology_name} does not contain magic annotations"
             )
         else:
             pass
 
     instantiation = postannotation[0][2:].split(" ")
     instanceDetails = {
-        "constant_class": constant,
+        "topology_class": topology,
         "topology": "",
         "baseID": "",
         "instanceReplacements": [],
         "configReplacement": {"from": "", "to": ""},
     }
 
-    if "is" == instantiation[0] and "topology" == instantiation[1]:
+    if "is" == instantiation[0]:
         # topology may be an instance
-        instanceDetails["topology"] = instantiation[2]
+        instanceDetails["topology"] = instantiation[1]
 
-        if "base" == instantiation[3] and "id" == instantiation[4]:
-            withIdx = 6
-            for i in range(5, len(instantiation)):
+        if "base" == instantiation[2] and "id" == instantiation[3]:
+            withIdx = 5
+            for i in range(4, len(instantiation)):
                 if "with" != instantiation[i]:
                     instanceDetails["baseID"] += instantiation[i]
                 else:
@@ -126,13 +126,13 @@ def constant_to_subtopology_instance(constant: Parser.ConstantParser):
 
                     if error:
                         print(
-                            f"[ERR] Topology instance {constant.constant_Id} has an invalid magic annotation"
+                            f"[ERR] Topology instance {topology.topology_name} has an invalid magic annotation"
                         )
                         # we NEED to hard exit
                         sys.exit(1)
                     if not endBracket:
                         print(
-                            f"[ERR] Expected }} to close magic annotation of {constant.constant_Id} instance but found nothing."
+                            f"[ERR] Expected }} to close magic annotation of {topology.topology_name} instance but found nothing."
                         )
                         sys.exit(1)
     return instanceDetails
@@ -233,7 +233,8 @@ def updateDependencies(fpp_cache, path, locs: list):
     """
 
     try:
-        os.mkdir(fpp_cache + "/tmp")
+        if not os.path.exists(fpp_cache + "/tmp"):
+            os.mkdir(fpp_cache + "/tmp")
 
         fpp.fpp_depend(fpp_cache + "/tmp", path, locs)
 
@@ -272,7 +273,7 @@ def updateDependencies(fpp_cache, path, locs: list):
     return 1
 
 
-def cleanMainFppFile(path, topology):
+def cleanMainFppFile(path):
     """
     Clean up the artifact of the topology in the main fpp file. This removes the
     duplicate definitions error with the build.
@@ -284,7 +285,7 @@ def cleanMainFppFile(path, topology):
     removingTopology = False
     removedTopology = False
     for i in range(len(lines)):
-        if f"topology {topology}" in lines[i]:
+        if f"topology" in lines[i] and "@<!" in lines[i+1]:
             lines[i] = ""
             removingTopology = True
             removedTopology = True
@@ -305,6 +306,22 @@ def cleanMainFppFile(path, topology):
         return 1
     else:
         return 0
+    
+def removeFromMainLocs(path, qf):
+    """
+    Remove the subtopology instance from the locs file
+    """
+
+    with open(path, "r") as f:
+        lines = f.readlines()
+
+    for i in range(len(lines)):
+        if qf in lines[i]:
+            lines[i] = ""
+            break
+            
+    with open(path, "w") as f:
+        f.writelines(lines)
 
 
 def replaceConfig(replacement, toRebuild):

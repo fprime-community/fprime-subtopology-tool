@@ -17,8 +17,8 @@ This tool is split into two parts: the **autocoder**, which is injected into the
 Simple syntax such as:
 
 ```
-constant MyST = {}
-@<! is topology st.st base id 0xCCCC with {
+topology MyST {}
+@<! is st.st base id 0xCCCC with {
 @<!    st.a = main.main_a    
 @<! }
 ```
@@ -33,7 +33,7 @@ We must make clear that the terminology "subtopology instance" is used only for 
 
 As of the writing of this documentation, this tool will not work out of the box with the latest stable releases of F Prime. This is because of certain changed with fpp, F Prime's modeling language, and F Prime's autocoder structure. To that end, the minimum versions of certain tools are provided:
 
-- nasa/fprime >= commit af76f08
+- nasa/fprime >= commit UNRELEASED
 - nasa/fpp >= commit adee0c8
 - Python >= release 3.8
 

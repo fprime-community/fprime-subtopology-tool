@@ -85,10 +85,14 @@ def run_test_ex(num):
             else:
                 os.chdir("..")
                 return False
-                
-        with open("st-locs.fpp", "r") as f:
-            with open("out.out.fpp", "a") as out:
-                out.write(f.read())
+        
+        with open("st.fpp", "r") as st:
+            with open("st-locs.fpp", "r") as f:
+                with open("main.out.fpp", "r") as main:
+                    with open("out.out.fpp", "w") as out:
+                        out.write(st.read())
+                        out.write(f.read())
+                        out.write(main.read())
 
         # compare out.out.fpp and out.ref.fpp
         with open("out.out.fpp", "r") as f:
@@ -104,6 +108,7 @@ def run_test_ex(num):
             tf = False
 
         os.remove("st-locs.fpp")
+        os.remove("main.out.fpp")
         os.chdir("..")
 
         return tf
