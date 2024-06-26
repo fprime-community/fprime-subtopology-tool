@@ -33,7 +33,7 @@ We must make clear that the terminology "subtopology instance" is used only for 
 
 As of the writing of this documentation, this tool will not work out of the box with the latest stable releases of F Prime. This is because of certain changed with fpp, F Prime's modeling language, and F Prime's autocoder structure. To that end, the minimum versions of certain tools are provided:
 
-- nasa/fprime >= commit UNRELEASED
+- nasa/fprime >= commit e817ad9
 - nasa/fpp >= commit adee0c8
 - Python >= release 3.8
 
