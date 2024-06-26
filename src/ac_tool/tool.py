@@ -7,11 +7,16 @@ import utils as Utils
 import shutil
 import argparse
 import sys
+import interface_builder as InterfaceBuilder
 from pathlib import Path
 
 TOPOLOGIES_TO_INSTANTIATE = []
 WRITTEN_FILE_PIECES = []
-
+ST_INTERFACES = {
+    "in" : {},
+    "out" : {},
+}
+FPP_AST_CACHE = []
 
 def walkModule(data, oldQf):
     module = Parser.ModuleParser(data)
@@ -76,35 +81,55 @@ def walkTopology(data, module):
     return qf
 
 
-def openFppFile(path):
+def openFppFile(path, locs, onlySyntax):
+    if locs is None:
+        locs = FPP_LOCS
+        
+    if onlySyntax is None:
+        onlySyntax = False
+    
     if not os.path.isabs(path):
         path = Path(path).resolve()
 
     pathDir = os.path.dirname(path)
-
-    if not os.path.exists(pathDir + "/tmp"):
-        try:
-            os.mkdir(pathDir + "/tmp")
-        except OSError as e:
-            print("Creation of the directory %s failed" % (pathDir + "/tmp"))
-            sys.exit(1)
-
-    os.chdir(pathDir + "/tmp")
+    fileBasename = os.path.basename(path)
+    folderName = f"/{fileBasename.split('.')[0]}Cache"
     
-    fpp.fpp_to_json(FPP_LOCS, path)
+    pathToFolder = pathDir + folderName
+
+    if not os.path.exists(pathToFolder):
+        try:
+            os.mkdir(pathToFolder)
+            FPP_AST_CACHE.append(pathToFolder)
+        except OSError as e:
+            raise Exception("Creation of the directory %s failed" % (pathToFolder))
+
+    os.chdir(pathToFolder)
+        
+    if not os.path.exists("fpp-ast.json"):
+        fpp.fpp_to_json(locs, path, onlySyntax)
 
     # parse json
     with open("fpp-ast.json", "r") as f:
         AST = json.load(f)
         
     os.chdir(pathDir)
-    shutil.rmtree("./tmp", ignore_errors=True)
+    
+    if onlySyntax:
+        shutil.rmtree(pathToFolder, ignore_errors=True)
+        
+        if pathToFolder in FPP_AST_CACHE:
+            FPP_AST_CACHE.remove(pathToFolder)
 
     return AST
 
+def cleanFppASTCache():
+    for path in FPP_AST_CACHE:
+        shutil.rmtree(path, ignore_errors=True)
+
 
 def visitFppFile(path):
-    AST = openFppFile(path)
+    AST = openFppFile(path, None, None)
 
     for i in range(len(AST[0]["members"])):
         if "DefModule" in AST[0]["members"][i][1]:
@@ -165,7 +190,7 @@ def topology_to_instance(topology_in):
 
     locations = load_locs()
     topology_file = find_in_locs(locations, "topologies", topology_in["topology"])
-    topology_file = openFppFile(topology_file)
+    topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
         topology_file[0]["members"],
@@ -200,6 +225,14 @@ def topology_to_instance(topology_in):
         if preannot is not None and len(preannot) > 0:
             if "! is local" == preannot[0]:
                 isLocal = True
+                
+            if "! is interface" in preannot[0]:
+                if " input" in preannot[0]:
+                    ST_INTERFACES["in"] = instance
+                
+                if " output" in preannot[0]:
+                    ST_INTERFACES["out"] = instance
+                
 
         for replacement in topology_in["instanceReplacements"]:
             if instance.instance_name in replacement["toReplace"] and not isLocal:
@@ -212,10 +245,9 @@ def topology_to_instance(topology_in):
             toRebuild["locals"].append(instance.instance_name)
 
     if numReplaced != len(topology_in["instanceReplacements"]):
-        print(
+        raise Exception(
             f"[ERR] Failed to replace all component instances in topology instance {topology_in['qf']}. You may have tried to replace an instance that does not exist or is local to {topology_in['topology']}."
         )
-        sys.exit(1)
 
     for instance in toRebuild["instances"]:
         if instance.instance_name in toRebuild["locals"]:
@@ -223,12 +255,11 @@ def topology_to_instance(topology_in):
                 instance_file = find_in_locs(
                     locations, "instances", instance.instance_name
                 )
-                instance_file = openFppFile(instance_file)
+                instance_file = openFppFile(instance_file, None, None)
             except Exception as e:
-                print(
+                raise Exception(
                     f"[ERR] Failed to open instance file location for {instance.instance_name}. This most likely means that your instance is not properly qualified in your file."
                 )
-                sys.exit(1)
 
             compInst = Utils.module_walker(
                 instance_file[0]["members"],
@@ -339,6 +370,7 @@ def main():
         --f, --file [path]:     path to file to check for subtopology instances
         --p, --path [path]:     path to the output file
         --c, --cache [path]:    path to the fpp cache folder
+        --t, --test:            indicate that this tool is being run in testing mode
 
     Return:
         If no subtopology instances in the given file, an exception will be raised
@@ -427,6 +459,19 @@ def main():
             Utils.updateDependencies(
                 FPP_CACHE, FPP_OUTPUT, [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"]
             )
+        
+        for topology in TOPOLOGIES_TO_INSTANTIATE:
+            topologyName = topology['qf'].split(".")[-1]
+            
+        if ST_INTERFACES["in"] and ST_INTERFACES["out"]:
+            print(f"[INFO] Generating interface for {topologyName}...")
+            InterfaceBuilder.interface_entrypoint(
+                FPP_OUTPUT,
+                f"{dirOfOutput}/{filename}",
+                FPP_LOCS,
+                topologyName,
+                ST_INTERFACES,
+            )
 
         TOPOLOGIES_TO_INSTANTIATE.clear()
         WRITTEN_FILE_PIECES.clear()
@@ -435,9 +480,12 @@ def main():
         FPP_CACHE = ""
         FPP_INPUT = ""
 
-        print(f"[DONE] file {parsed.f} processed successfully by subtopology ac")
+        cleanFppASTCache()
+        print(f"[DONE] file {filename} processed successfully by subtopology ac")
     except Exception as e:
-        print(f"[MESSAGE] {e}")
+        print("[ERR] " + str(e))
+        cleanFppASTCache()
+        raise
         sys.exit(1)
 
 

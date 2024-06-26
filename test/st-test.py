@@ -2,6 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 import shutil
+import glob
 
 """
 Test cases for the ac-tool, that uses fpp-to-json to be able to parse fpp files. This allows
@@ -30,6 +31,10 @@ ex5:
 ex6:
     Test a case where the locs file is invalid
     Assert FALSE
+    
+ex7:
+    Test a case where subtopology interfaces are used
+    Assert TRUE
 """
 
 def get_to_test_dir():
@@ -68,10 +73,7 @@ def run_test_ex(num):
         ]
         command = subprocess.run(cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
                 
-        if not os.path.exists("out.out.fpp") or not os.path.exists("st-locs.fpp"):
-            if os.path.exists("tmp"):
-                shutil.rmtree("tmp", ignore_errors=True)
-                
+        if not os.path.exists("out.out.fpp") or not os.path.exists("st-locs.fpp"):                
             with open("out.out.txt", "w") as f:
                 f.write(command.stdout.decode("utf-8"))
         
@@ -93,6 +95,15 @@ def run_test_ex(num):
                         out.write(st.read())
                         out.write(f.read())
                         out.write(main.read())
+                        
+        glb = glob.glob("*_interface.fppi")
+        
+        for file in glb:
+            with open(file, "r") as f:
+                with open("out.out.fpp", "a") as out:
+                    out.write(f.read())
+                    
+            os.remove(file)
 
         # compare out.out.fpp and out.ref.fpp
         with open("out.out.fpp", "r") as f:
@@ -135,3 +146,6 @@ def test_ex5_syntax_err():
     
 def test_ex6_locs_invalid():
     assert run_test_ex(6)
+    
+def test_ex7_interfaces():
+    assert run_test_ex(7)

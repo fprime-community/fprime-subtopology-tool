@@ -45,6 +45,7 @@ class FppInstanceSpec:
 
 class FppConnectionGraph:
     def __init__(self, connection_graph_name):
+        self.connections = []
         self.connection_graph_name = connection_graph_name
 
     def open(self):
@@ -52,6 +53,16 @@ class FppConnectionGraph:
 
     def connect(self, connection):
         return f"    {connection['source']['name']}{connection['source']['num']} -> {connection['dest']['name']}{connection['dest']['num']}"
+    
+    def connect_from_db(self):
+        allConnections = ""
+        for connection in self.connections:
+            allConnections += self.connect(connection) + "\n"
+            
+        return allConnections
+    
+    def save_connection(self, connection):
+        self.connections.append(connection)
 
     def close(self):
         return "}"
