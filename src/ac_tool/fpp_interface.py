@@ -46,17 +46,18 @@ def fpp_depend(cache_folder, input_file, locs_files) -> str:
     except subprocess.CalledProcessError as e:
         print(f"[ERR] fpp-depend failed with error: {e}")
         return 1
-    
+
+
 def compute_simple_dependencies(locs_file, input):
     print(f"[fpp] Calculating simple fpp dependencies for {os.path.basename(input)}...")
-    
+
     try:
         fppDep = subprocess.run(
             ["fpp-depend", locs_file, input],
             check=True,
             stdout=subprocess.PIPE,
         )
-        
+
         return fppDep.stdout.decode("utf-8")
     except subprocess.CalledProcessError as e:
         print(f"[ERR] fpp-depend failed with error: {e}")
@@ -76,25 +77,23 @@ def fpp_to_json(locs, input_file, onlySyntax=False):
 
     # run fpp
     print(f"[fpp] Running fpp-to-json for {os.path.basename(input_file)}...")
-    
-    cmdS = ['fpp-to-json', input_file, '-s']
+
+    cmdS = ["fpp-to-json", input_file, "-s"]
 
     if not onlySyntax:
         dependencies = compute_simple_dependencies(locs, input_file)
-        dependencies = dependencies.split('\n')[:-1]
+        dependencies = dependencies.split("\n")[:-1]
         cmd = ["fpp-to-json"] + dependencies + [input_file]
-        
+
         try:
-            fppToJSON = subprocess.run(
-                cmd, check=True, stdout=subprocess.PIPE
-            )
+            fppToJSON = subprocess.run(cmd, check=True, stdout=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            raise Exception(f"[ERR] fpp-to-json pt1 failed with error. This part checks if you have a valid model file: {e}")
-    
+            raise Exception(
+                f"[ERR] fpp-to-json pt1 failed with error. This part checks if you have a valid model file: {e}"
+            )
+
     try:
-        fppToJSON = subprocess.run(
-            cmdS, check=True, stdout=subprocess.PIPE
-        )
+        fppToJSON = subprocess.run(cmdS, check=True, stdout=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
         raise Exception(f"[ERR] fpp-to-json pt2 failed with error: {e}")
 

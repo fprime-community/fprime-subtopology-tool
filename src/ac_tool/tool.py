@@ -16,6 +16,7 @@ ST_INTERFACES = {}
 FPP_AST_CACHE = []
 DEPENDENCY_REPLACE = []
 
+
 def walkModule(data, oldQf):
     module = Parser.ModuleParser(data)
     module.parse()
@@ -62,7 +63,7 @@ def walkTopology(data, module):
         qf = module + "." + topology.topology_name  # qualifier
 
     topology.qf = qf
-    
+
     isInstantiable = Utils.topology_to_instance(topology)
 
     if isInstantiable:
@@ -82,17 +83,17 @@ def walkTopology(data, module):
 def openFppFile(path, locs, onlySyntax):
     if locs is None:
         locs = FPP_LOCS
-        
+
     if onlySyntax is None:
         onlySyntax = False
-    
+
     if not os.path.isabs(path):
         path = Path(path).resolve()
 
     pathDir = os.path.dirname(path)
     fileBasename = os.path.basename(path)
     folderName = f"/{fileBasename.split('.')[0]}Cache"
-    
+
     pathToFolder = pathDir + folderName
 
     if not os.path.exists(pathToFolder):
@@ -103,23 +104,24 @@ def openFppFile(path, locs, onlySyntax):
             raise Exception("Creation of the directory %s failed" % (pathToFolder))
 
     os.chdir(pathToFolder)
-        
+
     if not os.path.exists("fpp-ast.json"):
         fpp.fpp_to_json(locs, path, onlySyntax)
 
     # parse json
     with open("fpp-ast.json", "r") as f:
         AST = json.load(f)
-        
+
     os.chdir(pathDir)
-    
+
     if onlySyntax:
         shutil.rmtree(pathToFolder, ignore_errors=True)
-        
+
         if pathToFolder in FPP_AST_CACHE:
             FPP_AST_CACHE.remove(pathToFolder)
 
     return AST
+
 
 def cleanFppASTCache():
     for path in FPP_AST_CACHE:
@@ -183,9 +185,11 @@ def find_in_locs(locs, type, name):
             return item["location"]
     return None
 
+
 def setup_interface(topology):
     if topology not in ST_INTERFACES:
         ST_INTERFACES[topology] = {"in": None, "out": None}
+
 
 def topology_to_instance(topology_in):
     toRebuild = {"imports": [], "instances": [], "connections": [], "components": []}
@@ -195,9 +199,9 @@ def topology_to_instance(topology_in):
 
     for topology in TOPOLOGIES_TO_INSTANTIATE:
         if topology == topology_in:
-            topology['og_file'] = str(Path(str(topology_file)).resolve())
+            topology["og_file"] = str(Path(str(topology_file)).resolve())
             break
-    
+
     topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
@@ -233,15 +237,14 @@ def topology_to_instance(topology_in):
         if preannot is not None and len(preannot) > 0:
             if "! is local" == preannot[0]:
                 isLocal = True
-                
+
             if "! is interface" in preannot[0]:
-                setup_interface(topology_in['qf'])
+                setup_interface(topology_in["qf"])
                 if " input" in preannot[0]:
-                    ST_INTERFACES[topology_in['qf']]['in'] = instance
-                
+                    ST_INTERFACES[topology_in["qf"]]["in"] = instance
+
                 if " output" in preannot[0]:
-                    ST_INTERFACES[topology_in['qf']]["out"] = instance
-                
+                    ST_INTERFACES[topology_in["qf"]]["out"] = instance
 
         for replacement in topology_in["instanceReplacements"]:
             if instance.instance_name in replacement["toReplace"] and not isLocal:
@@ -318,12 +321,12 @@ def topology_to_instance(topology_in):
 def generateFppFile(toRebuild, topology_in):
     modules_to_generate = topology_in["qf"].split(".")
     topology_to_generate = modules_to_generate.pop()
-    
-    Utils.removeFromMainLocs(FPP_LOCS, topology_in['qf'])
+
+    Utils.removeFromMainLocs(FPP_LOCS, topology_in["qf"])
 
     fileContent = ""
     moduleClosures = ""
-    
+
     for module in modules_to_generate:
         fileContent += FppWriter.FppModule(module).open() + "\n"
         moduleClosures += FppWriter.FppModule(module).close() + "\n"
@@ -455,39 +458,46 @@ def main():
                 f"{dirOfOutput}/st-locs.fpp",
                 newLocs,
             )
-            
+
             # clean up new source file
             filename = os.path.basename(FPP_INPUT) if not IN_TEST else "main.out.fpp"
-            
+
             shutil.copyfile(FPP_INPUT, f"{dirOfOutput}/{filename}")
             Utils.cleanMainFppFile(f"{dirOfOutput}/{filename}")
         except Exception as e:
             raise Exception(f"Failed to write new locs file: {e}")
 
         for topology in TOPOLOGIES_TO_INSTANTIATE:
-            topologyName = topology['qf'].split(".")[-1]
+            topologyName = topology["qf"].split(".")[-1]
 
-            if ST_INTERFACES[topology['qf']]["in"] or ST_INTERFACES[topology['qf']]["out"]:
+            if (
+                ST_INTERFACES[topology["qf"]]["in"]
+                or ST_INTERFACES[topology["qf"]]["out"]
+            ):
                 print(f"[INFO] Generating interface for {topologyName}...")
                 InterfaceBuilder.interface_entrypoint(
                     FPP_OUTPUT,
                     f"{dirOfOutput}/{filename}",
                     FPP_LOCS,
                     topologyName,
-                    ST_INTERFACES[topology['qf']],
-                )     
-                
-                InterfaceBuilder.removeInterfaces(f"{dirOfOutput}/{filename}", ST_INTERFACES[topology['qf']]) 
-                InterfaceBuilder.removeInterfaces(FPP_OUTPUT, ST_INTERFACES[topology['qf']])
-                
-                DEPENDENCY_REPLACE.append({
-                    "from": topology['og_file'],
-                    "to": " NONE "
-                })
-                
+                    ST_INTERFACES[topology["qf"]],
+                )
+
+                InterfaceBuilder.removeInterfaces(
+                    f"{dirOfOutput}/{filename}", ST_INTERFACES[topology["qf"]]
+                )
+                InterfaceBuilder.removeInterfaces(
+                    FPP_OUTPUT, ST_INTERFACES[topology["qf"]]
+                )
+
+                DEPENDENCY_REPLACE.append({"from": topology["og_file"], "to": " NONE "})
+
         if not IN_TEST:
             Utils.updateDependencies(
-                FPP_CACHE, FPP_OUTPUT, [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"], DEPENDENCY_REPLACE
+                FPP_CACHE,
+                FPP_OUTPUT,
+                [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"],
+                DEPENDENCY_REPLACE,
             )
 
         TOPOLOGIES_TO_INSTANTIATE.clear()

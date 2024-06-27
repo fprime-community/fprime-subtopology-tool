@@ -8,7 +8,9 @@ Before reading this file, it is recommended to take a quick glance over the [Des
 
 ## In the subtopology
 
-The only syntax in the subtopology that is valid is defining instances to be *local*. Local instances are those that are immutable, and are always defined in a subtopology. Any non-local components in a subtopology are exposed to be used in the parent topology, and they can be replaced.
+### Defining local instances
+
+Local instances are those that are immutable, and are always defined in a subtopology. Any non-local components in a subtopology are exposed to be used in the parent topology, and they can be replaced.
 
 **Syntax**: `@! is local`
 
@@ -16,18 +18,47 @@ The only syntax in the subtopology that is valid is defining instances to be *lo
 
 **Applies to**: instance specifications
 
-
 The following is an example of what your subtopology file may look like with local components.
 
 ```
 module Main {
     passive component A {}
 
-    instance myCoolComponent = Main.A base id 0xFFFF
+    instance myCoolComponent: Main.A base id 0xFFFF
 
     topology ST {
         @! is local # magic annotation
         instance Main.myCoolComponent # qualified names are highly recommended
+    }
+}
+```
+
+### Defining subtopology interfaces
+
+Subtopology interfaces (described further in the [Interfaces.md](./Interfaces.md) document) are formal definitions for interfacing with components inside a topology.
+
+**Syntax**: `@! is interface [input,output]`
+
+**Modifiers**: Choose either `input` or `output` depending on the interface
+
+**Applies to**: instance specifications
+
+The following is an example of what your subtopology file may look like with interfaces.
+
+```
+module Main {
+    passive component STInput {}
+    passive component STOutput {}
+
+    instance Input: Main.STInput base id 0xFFFF
+    instance Output: Main.STOutput base id 0xAAAA
+
+    topology ST {
+        @! is interface input
+        instance Main.Input
+
+        @! is interface output
+        instance Main.Output
     }
 }
 ```

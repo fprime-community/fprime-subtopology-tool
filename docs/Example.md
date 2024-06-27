@@ -6,6 +6,7 @@ The following document provides a worked example of a project that uses the subt
 2. [The library](#the-library)
     - [RNG Component](#rng-component)
     - [RNGTopology](#rngtopology)
+    - [Subtopology Interface](#subtopology-interface)
 3. [External components (hardware, receiver)](#external-components-hardware-receiver)
 4. [Deployment and subtopology instantiation](#deployment-and-subtopology-instantiation)
 5. [Build and Conclusion](#build-and-conclusion)
@@ -58,7 +59,9 @@ module RNGLibrary {
         # telemetry from the component
         telemetry DataIn: U32
         telemetry RNGSeed: U32
+        telemetry Clock: U32 # for the subtopology interface
 
+        sync input port run: Svc.Sched # for the subtopology interface
         sync input port data: RNGTopologyConfig.MessagePort
         output port processed: RNGTopologyConfig.MessagePort
     }
@@ -170,6 +173,58 @@ namespace RNGTopology
 
 #endif
 ```
+
+### Subtopology Interface
+
+We also want to add an input [interface](./Interfaces.md) to our subtopology, so that we can pass through a clock signal from the main deployment into our `RNG` component. This is not strictly necessary given our context, however we will do it as an exercise.
+
+Start by creating the input interface component in your subtopology's directory, `/ST-Interface/Input.fpp`:
+
+```
+module RNGTopologyInterface {
+    passive component Input {
+        sync input port clock: Svc.Sched
+        output port clock_in: Svc.Sched
+    }
+}
+```
+
+Then, we define it and specify it in our subtopology:
+
+```
+module RNGTopology {
+    ...
+
+    instance Input: RNGTopologyInterface.Input base id 0x7777
+
+    topology RNG {
+        ...
+
+        @! is interface input
+        instance RNGTopology.Input
+
+        ...
+    }
+}
+```
+
+We then should remember to create connection graphs in our subtopology (now) and our main topology (later) that utilize the interface.
+
+```
+# in `topology RNG {}`
+
+connections Interface {
+    RNGTopology.Input.clock_in -> RNGTopology.rng.run
+}
+
+# in the main topology (done later)
+
+connections Interface_Testing {
+    rateGroup2.RateGroupMemberOut[2] -> RNGTopology.Input.clock
+}
+```
+
+Note that you will have to implement the `run` handler function in your `RNG.cpp` file. A suggestion is to implement it to send a random value over the `Clock` telemetry channel.
 
 ## External components (hardware, receiver)
 

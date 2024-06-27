@@ -3,7 +3,18 @@ import fpp_interface as fpp
 import os
 import shutil
 
+
 def topology_to_instance(topology: Parser.TopologyParser):
+    """
+    Turn a topology provided by the parser into a topology instance that can be written to
+    an fpp file.
+    
+    Args:
+        topology: The topology to turn into an instance
+        
+    Returns:
+        instanceDetails: The instance details for the topology
+    """
     postannotation = topology.topology_postannot
 
     if postannotation is None or postannotation == []:
@@ -101,6 +112,7 @@ def topology_to_instance(topology: Parser.TopologyParser):
                         )
     return instanceDetails
 
+
 def module_walker(AST, qf, type, type_parser):
     """
     This function walks through the JSON AST of a module and returns the AST for a
@@ -121,15 +133,20 @@ def module_walker(AST, qf, type, type_parser):
         if "DefModule" in m[1]:
             module = Parser.ModuleParser(m)
             module.parse()
-            
+
             if module.module_name == qf[0] and len(qf) > 1:
                 for _m in module.members():
                     if "DefModule" in _m[1]:
                         moduleDeeper = Parser.ModuleParser(_m)
                         moduleDeeper.parse()
-                        
+
                         if moduleDeeper.module_name == qf[1] and len(qf) > 2:
-                            return module_walker(moduleDeeper.members(), ".".join(qf[1:]), type, type_parser)
+                            return module_walker(
+                                moduleDeeper.members(),
+                                ".".join(qf[1:]),
+                                type,
+                                type_parser,
+                            )
                     if type in _m[1]:
                         _type = type_parser(_m)
                         _type.parse()
@@ -220,7 +237,7 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
                     for line in f:
                         if ".subtopologies.fpp" in line:
                             continue
-                        
+
                         if "/ST-Interface/" in line:
                             continue
 
@@ -232,22 +249,22 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
                                 continue
 
                         out.write(line)
-            
+
             actContent = []
             with open(fpp_cache + "/" + file, "r") as check:
                 for line in check:
                     if "/ST-Interface/" in line:
                         continue
-                    
+
                     for replacement in dependency_replacements:
                         if replacement["from"] in line:
-                            line = replacement['to']
-                    
+                            line = replacement["to"]
+
                     if line != " NONE ":
                         actContent.append(line)
-            
+
             actContent = list(filter(lambda x: x != "\n", actContent))
-                    
+
             with open(fpp_cache + "/" + file, "w") as check:
                 check.writelines(actContent)
 
@@ -272,7 +289,7 @@ def cleanMainFppFile(path):
     removingTopology = False
     removedTopology = False
     for i in range(len(lines)):
-        if f"topology" in lines[i] and "@<!" in lines[i+1]:
+        if f"topology" in lines[i] and "@<!" in lines[i + 1]:
             lines[i] = ""
             removingTopology = True
             removedTopology = True
@@ -293,7 +310,8 @@ def cleanMainFppFile(path):
         return 1
     else:
         return 0
-    
+
+
 def removeFromMainLocs(path, qf):
     """
     Remove the subtopology instance from the locs file
@@ -306,7 +324,7 @@ def removeFromMainLocs(path, qf):
         if qf in lines[i]:
             lines[i] = ""
             break
-            
+
     with open(path, "w") as f:
         f.writelines(lines)
 

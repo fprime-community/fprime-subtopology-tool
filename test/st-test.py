@@ -37,23 +37,25 @@ ex7:
     Assert TRUE
 """
 
+
 def get_to_test_dir():
     abspath = os.path.abspath(__file__)
     dname = os.path.dirname(abspath)
     os.chdir(dname)
 
+
 def run_test_ex(num):
     # get to the test directory
-    
+
     get_to_test_dir()
-        
+
     exName = f"./ex{num}"
     try:
         os.chdir(exName)
     except FileNotFoundError as e:
         print(f"[text/{exName}] Directory not found")
         return
-    
+
     pathToTool = Path("../../src/ac_tool/tool.py").absolute()
     print(pathToTool)
 
@@ -71,15 +73,17 @@ def run_test_ex(num):
             "out.out.fpp",
             "--t",
         ]
-        command = subprocess.run(cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-                
-        if not os.path.exists("out.out.fpp") or not os.path.exists("st-locs.fpp"):                
+        command = subprocess.run(
+            cmdArgs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+        )
+
+        if not os.path.exists("out.out.fpp") or not os.path.exists("st-locs.fpp"):
             with open("out.out.txt", "w") as f:
                 f.write(command.stdout.decode("utf-8"))
-        
+
             with open("out.ref.txt", "r") as f:
                 ref = f.read()
-                
+
             if ref == command.stdout.decode("utf-8"):
                 os.remove("out.out.txt")
                 os.chdir("..")
@@ -87,7 +91,7 @@ def run_test_ex(num):
             else:
                 os.chdir("..")
                 return False
-        
+
         with open("st.fpp", "r") as st:
             with open("st-locs.fpp", "r") as f:
                 with open("main.out.fpp", "r") as main:
@@ -95,14 +99,14 @@ def run_test_ex(num):
                         out.write(st.read())
                         out.write(f.read())
                         out.write(main.read())
-                        
+
         glb = glob.glob("*_interface.fppi")
-        
+
         for file in glb:
             with open(file, "r") as f:
                 with open("out.out.fpp", "a") as out:
                     out.write(f.read())
-                    
+
             os.remove(file)
 
         # compare out.out.fpp and out.ref.fpp
@@ -132,20 +136,26 @@ def run_test_ex(num):
 def test_ex1_simple():
     assert run_test_ex(1)
 
+
 def test_ex2_multiple():
     assert run_test_ex(2)
+
 
 def test_ex3_mix_local_global():
     assert run_test_ex(3)
 
+
 def test_ex4_local_replace():
     assert run_test_ex(4)
-    
+
+
 def test_ex5_syntax_err():
     assert run_test_ex(5)
-    
+
+
 def test_ex6_locs_invalid():
     assert run_test_ex(6)
-    
+
+
 def test_ex7_interfaces():
     assert run_test_ex(7)
