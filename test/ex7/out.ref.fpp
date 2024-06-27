@@ -58,9 +58,7 @@ module main {
 
     import MyST
 
-    instance st.Input
 
-    instance st.Output
 
     instance main_a
 

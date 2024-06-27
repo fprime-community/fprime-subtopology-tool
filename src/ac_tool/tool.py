@@ -12,11 +12,9 @@ from pathlib import Path
 
 TOPOLOGIES_TO_INSTANTIATE = []
 WRITTEN_FILE_PIECES = []
-ST_INTERFACES = {
-    "in" : {},
-    "out" : {},
-}
+ST_INTERFACES = {}
 FPP_AST_CACHE = []
+DEPENDENCY_REPLACE = []
 
 def walkModule(data, oldQf):
     module = Parser.ModuleParser(data)
@@ -185,11 +183,21 @@ def find_in_locs(locs, type, name):
             return item["location"]
     return None
 
+def setup_interface(topology):
+    if topology not in ST_INTERFACES:
+        ST_INTERFACES[topology] = {"in": None, "out": None}
+
 def topology_to_instance(topology_in):
     toRebuild = {"imports": [], "instances": [], "connections": [], "components": []}
 
     locations = load_locs()
     topology_file = find_in_locs(locations, "topologies", topology_in["topology"])
+
+    for topology in TOPOLOGIES_TO_INSTANTIATE:
+        if topology == topology_in:
+            topology['og_file'] = str(Path(str(topology_file)).resolve())
+            break
+    
     topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
@@ -227,11 +235,12 @@ def topology_to_instance(topology_in):
                 isLocal = True
                 
             if "! is interface" in preannot[0]:
+                setup_interface(topology_in['qf'])
                 if " input" in preannot[0]:
-                    ST_INTERFACES["in"] = instance
+                    ST_INTERFACES[topology_in['qf']]['in'] = instance
                 
                 if " output" in preannot[0]:
-                    ST_INTERFACES["out"] = instance
+                    ST_INTERFACES[topology_in['qf']]["out"] = instance
                 
 
         for replacement in topology_in["instanceReplacements"]:
@@ -455,22 +464,30 @@ def main():
         except Exception as e:
             raise Exception(f"Failed to write new locs file: {e}")
 
-        if not IN_TEST:
-            Utils.updateDependencies(
-                FPP_CACHE, FPP_OUTPUT, [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"]
-            )
-        
         for topology in TOPOLOGIES_TO_INSTANTIATE:
             topologyName = topology['qf'].split(".")[-1]
-            
-        if ST_INTERFACES["in"] and ST_INTERFACES["out"]:
-            print(f"[INFO] Generating interface for {topologyName}...")
-            InterfaceBuilder.interface_entrypoint(
-                FPP_OUTPUT,
-                f"{dirOfOutput}/{filename}",
-                FPP_LOCS,
-                topologyName,
-                ST_INTERFACES,
+
+            if ST_INTERFACES[topology['qf']]["in"] or ST_INTERFACES[topology['qf']]["out"]:
+                print(f"[INFO] Generating interface for {topologyName}...")
+                InterfaceBuilder.interface_entrypoint(
+                    FPP_OUTPUT,
+                    f"{dirOfOutput}/{filename}",
+                    FPP_LOCS,
+                    topologyName,
+                    ST_INTERFACES[topology['qf']],
+                )     
+                
+                InterfaceBuilder.removeInterfaces(f"{dirOfOutput}/{filename}", ST_INTERFACES[topology['qf']]) 
+                InterfaceBuilder.removeInterfaces(FPP_OUTPUT, ST_INTERFACES[topology['qf']])
+                
+                DEPENDENCY_REPLACE.append({
+                    "from": topology['og_file'],
+                    "to": " NONE "
+                })
+                
+        if not IN_TEST:
+            Utils.updateDependencies(
+                FPP_CACHE, FPP_OUTPUT, [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"], DEPENDENCY_REPLACE
             )
 
         TOPOLOGIES_TO_INSTANTIATE.clear()
@@ -483,9 +500,8 @@ def main():
         cleanFppASTCache()
         print(f"[DONE] file {filename} processed successfully by subtopology ac")
     except Exception as e:
-        print("[ERR] " + str(e))
+        print(str(e))
         cleanFppASTCache()
-        raise
         sys.exit(1)
 
 

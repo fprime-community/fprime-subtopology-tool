@@ -52,6 +52,12 @@ class FppConnectionGraph:
         return f"connections {self.connection_graph_name} {{"
 
     def connect(self, connection):
+        if connection['source']['num'] == None or connection['source']['num'] == "None":
+            connection['source']['num'] = ""
+            
+        if connection['dest']['num'] == None or connection['dest']['num'] == "None":
+            connection['dest']['num'] = ""
+            
         return f"    {connection['source']['name']}{connection['source']['num']} -> {connection['dest']['name']}{connection['dest']['num']}"
     
     def connect_from_db(self):
@@ -62,6 +68,12 @@ class FppConnectionGraph:
         return allConnections
     
     def save_connection(self, connection):
+        if connection['source']['num'] == None or connection['source']['num'] == "None":
+            connection['source']['num'] = ""
+            
+        if connection['dest']['num'] == None or connection['dest']['num'] == "None":
+            connection['dest']['num'] = ""
+            
         self.connections.append(connection)
 
     def close(self):

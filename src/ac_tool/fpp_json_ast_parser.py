@@ -439,6 +439,7 @@ class ConnectionGraphParser(ValueElements):
         self.cg_postannot = None
         self.qf = None
         self.cg_connections = []
+        self.cg_type = None
 
         self.cg_preannot = cg_JSON_list[0]
         self.cg_JSON = cg_JSON_list[1]
@@ -448,6 +449,12 @@ class ConnectionGraphParser(ValueElements):
         part = f"connections {self.cg_name} {{"
 
         for connection in self.cg_connections:
+            if connection['source']['num'] == None or connection['source']['num'] == "None":
+                connection['source']['num'] = ""
+            
+            if connection['dest']['num'] == None or connection['dest']['num'] == "None":
+                connection['dest']['num'] = ""
+                
             part = (
                 part
                 + f"\n    {connection['source']['name']}{connection['source']['num']} -> {connection['dest']['name']}{connection['dest']['num']}"
@@ -456,9 +463,14 @@ class ConnectionGraphParser(ValueElements):
         return part + "\n}"
 
     def parse(self):
-        import_bit = self.cg_JSON["SpecConnectionGraph"]["node"]["AstNode"]["data"][
-            "Direct"
-        ]
+        import_bit = self.cg_JSON["SpecConnectionGraph"]["node"]["AstNode"]["data"]
+        
+        if "Direct" not in import_bit:
+            self.cg_type = "Pattern"
+            return
+        else:
+            self.cg_type = "Direct"
+            import_bit = import_bit["Direct"]
 
         self.cg_name = import_bit["name"]
         self.qf = self.cg_name
@@ -481,11 +493,21 @@ class ConnectionGraphParser(ValueElements):
             connectionToAppend["source"]["name"] = (
                 value_parser(compInst) + "." + fromPort["portName"]["AstNode"]["data"]
             )
-            connectionToAppend["source"]["num"] = (
-                ("[" + connection["fromIndex"] + "]")
-                if connection["fromIndex"] != "None"
-                else ""
-            )
+            
+            if connectionToAppend["source"]["name"][-4:] == "None":
+                connectionToAppend["source"]["name"] = connectionToAppend["source"]["name"].replace("None", "")
+            
+            if connection["fromIndex"] != "None":
+                if connection['fromIndex'] is None or connection['fromIndex'] == 'None':
+                    connectionToAppend["source"]["num"] = ""
+                if type(connection["fromIndex"]) is dict:
+                    connectionToAppend["source"]["num"] = (
+                        "[" + value_parser(connection["fromIndex"]['Some']) + "]"
+                    )
+                else:
+                    connectionToAppend["source"]["num"] = (
+                        "[" + connection["fromIndex"] + "]"
+                    )
 
             toPort = connection["toPort"]["AstNode"]["data"]
             compInst = toPort["componentInstance"]
@@ -493,12 +515,22 @@ class ConnectionGraphParser(ValueElements):
             connectionToAppend["dest"]["name"] = (
                 value_parser(compInst) + "." + toPort["portName"]["AstNode"]["data"]
             )
-            connectionToAppend["dest"]["num"] = (
-                ("[" + connection["toIndex"] + "]")
-                if connection["toIndex"] != "None"
-                else ""
-            )
-
+            
+            if connectionToAppend["dest"]["name"][-4:] == "None":
+                connectionToAppend["dest"]["name"] = connectionToAppend["dest"]["name"].replace("None", "")
+            
+            if connection['toIndex'] != "None":
+                if connection['toIndex'] is None or connection['toIndex'] == 'None':
+                    connectionToAppend["dest"]["num"] = ""
+                if type(connection['toIndex']) is dict:
+                    connectionToAppend["dest"]["num"] = (
+                        "[" + value_parser(connection["toIndex"]['Some']) + "]"
+                    )
+                else:
+                    connectionToAppend["dest"]["num"] = (
+                        "[" + connection["toIndex"] + "]"
+                    )
+                    
             self.cg_connections.append(connectionToAppend)
 
 

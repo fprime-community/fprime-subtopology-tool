@@ -22,24 +22,25 @@ def quickInterfaceCheck(pathToFile, topologyName):
 def clean_cg_from_file(cg_name, path_to_file, include):
     with open(path_to_file, "r") as f:
         fileContents = f.read()
-       
+    
+    actualContent = []
     deleting = False   
     for line in fileContents.split("\n"):
-        if f"connections {cg_name}" in line and "{" in line:
-            fileContents = fileContents.replace(line, "")
+        if f"connections {cg_name} {{" in line:
             deleting = True
             continue
         if deleting:
             if "}" in line:
                 deleting = False
                 
-                if "_" in cg_name:
-                    fileContents = fileContents.replace(line, include)
+                if "Interface_" in cg_name:
+                    actualContent.append(include)
                     continue
-            fileContents = fileContents.replace(line, "")
-
-
-    Utils.writeFppFile(path_to_file, fileContents)
+            continue
+            
+        actualContent.append(line)
+        
+    Utils.writeFppFile(path_to_file, '\n'.join(actualContent))
 
     # with open(path_to_file, "w") as f:
     #     f.write(fileContents)
@@ -88,47 +89,50 @@ def interface_replacer(subtopology: Parser.TopologyParser, main_topology: Parser
             cg:Parser.ConnectionGraphParser = Parser.ConnectionGraphParser(member)
             cg.parse()
             
+            if cg.cg_type == "Pattern":
+                continue
+            
             if cg.cg_name == f"Interface_{topology_name}":
                 main_topology_cg = cg
                 break
             
     if subtopology_cg is None:
-        print(f"[WARN] Subtopology has no Interface connection graph")
-        return
+        raise Exception(f"[WARN] Subtopology has no Interface connection graph")
     if main_topology_cg is None:
-        print(f"[WARN] Main topology has no Interface_{topology_name} connection graph")
-        return
+        raise Exception(f"[WARN] Main topology has no Interface_{topology_name} connection graph")
     
     for connection in subtopology_cg.cg_connections:
-        if ST_Interfaces['in'].instance_name in connection["source"]["name"]:
-            if connection["source"]['name'].split("_")[-1] != "in":
-                raise Exception("Invalid input connection in subtopology")
-            
-            output_dest = ''.join(connection["source"]['name'].split("_")[:-1]) + connection['source']['num']
-            replaceWith = connection['dest']
-            
-            instName = '.'.join(replaceWith['name'].split(".")[:-1])
-            if not instance_already_specified(instances, instName):
-                instances.append(FppWriter.FppInstanceSpec(instName))
-                        
-            for connection in main_topology_cg.cg_connections:
-                if output_dest in connection["dest"]["name"]:
-                    new_cg.save_connection({"source": connection["source"], "dest": replaceWith})
-                    break
+        if ST_Interfaces['in'] is not {}:
+            if ST_Interfaces['in'].instance_name in connection["source"]["name"]:
+                if connection["source"]['name'].split("_")[-1] != "in":
+                    raise Exception("Invalid input connection in subtopology")
                 
-        if ST_Interfaces['out'].instance_name in connection["dest"]["name"]:
-            input_source = connection['dest']['name'] + "_out" + connection['dest']['num']
-            replaceWith = connection['source']
-            
-            instName = '.'.join(replaceWith['name'].split(".")[:-1])
-            if not instance_already_specified(instances, instName):
-                instances.append(FppWriter.FppInstanceSpec(instName))
-            
-            for connection in main_topology_cg.connections():
-                if input_source in connection["dest"]["name"]:
-                    new_cg.save_connection({"source": replaceWith, "dest": connection["dest"]})
-                    break
-                    
+                output_dest = ''.join(connection["source"]['name'].split("_")[:-1]) + (connection['source']['num'] if connection['source']['num'] != None else "")
+                replaceWith = connection['dest']
+                
+                instName = '.'.join(replaceWith['name'].split(".")[:-1])
+                if not instance_already_specified(instances, instName):
+                    instances.append(FppWriter.FppInstanceSpec(instName))
+                            
+                for connection in main_topology_cg.cg_connections:
+                    if output_dest in connection["dest"]["name"]:
+                        new_cg.save_connection({"source": connection["source"], "dest": replaceWith})
+                        break
+
+        if ST_Interfaces['out'] is not {} and ST_Interfaces['out'] is not None:        
+            if ST_Interfaces['out'].instance_name in connection["dest"]["name"]:
+                input_source = connection['dest']['name'] + "_out" + (connection['dest']['num'] if connection['dest']['num'] != None else "")
+                replaceWith = connection['source']
+                
+                instName = '.'.join(replaceWith['name'].split(".")[:-1])
+                if not instance_already_specified(instances, instName):
+                    instances.append(FppWriter.FppInstanceSpec(instName))
+                
+                for connection in main_topology_cg.connections():
+                    if input_source in connection["dest"]["name"]:
+                        new_cg.save_connection({"source": replaceWith, "dest": connection["dest"]})
+                        break
+                                        
     return new_cg, instances
 
 def interface_entrypoint(pathToSubtopology, pathToMainTopology, locs, topologyName, ST_Interfaces):    
@@ -170,3 +174,38 @@ def interface_entrypoint(pathToSubtopology, pathToMainTopology, locs, topologyNa
     
     clean_cg_from_file(f"Interface_{topologyName}", pathToMainTopology, include_file)
     clean_cg_from_file(f"Interface", pathToSubtopology, include_file)
+    
+def removeInterfaces(path, interface):
+    # make a copy of the file
+    with open(path, "r") as f:
+        lines = f.readlines()
+        
+    in_name = interface['in'].instance_name if interface['in'] is not None else "THISSHOULDNEVEREXIST"
+    out_name = interface['out'].instance_name if interface['out'] is not None else "THISSHOULDNEVEREXIST"
+    
+    in_short = in_name.split(".")[-1]
+    out_short = out_name.split(".")[-1]
+        
+    deleting = False
+    actLines = []
+    for i in range(len(lines)):
+        if in_name in lines[i] or out_name in lines[i] or in_short in lines[i] or out_short in lines[i]:
+            if lines[i][-1] == "\\":
+                deleting = True
+            if "@! is" in actLines[-1]:
+                actLines.pop()
+            lines[i] = ""
+            continue
+        if deleting:
+            if lines[i][-1] == "\\":
+                pass
+            else:
+                deleting = False
+            lines[i] = ""
+            continue
+            
+        actLines.append(lines[i])
+        
+    with open(path, "w") as f:
+        f.writelines(actLines)
+            

@@ -188,7 +188,7 @@ def quickFileScan(path):
     return False
 
 
-def updateDependencies(fpp_cache, path, locs: list):
+def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
     """
     This function updates the dependency cache files for a module. This tells the future
     autocoder what the dependencies are for the new subtopology we made.
@@ -220,6 +220,9 @@ def updateDependencies(fpp_cache, path, locs: list):
                     for line in f:
                         if ".subtopologies.fpp" in line:
                             continue
+                        
+                        if "/ST-Interface/" in line:
+                            continue
 
                         if "/instances.fpp" in line:
                             continue
@@ -229,6 +232,24 @@ def updateDependencies(fpp_cache, path, locs: list):
                                 continue
 
                         out.write(line)
+            
+            actContent = []
+            with open(fpp_cache + "/" + file, "r") as check:
+                for line in check:
+                    if "/ST-Interface/" in line:
+                        continue
+                    
+                    for replacement in dependency_replacements:
+                        if replacement["from"] in line:
+                            line = replacement['to']
+                    
+                    if line != " NONE ":
+                        actContent.append(line)
+            
+            actContent = list(filter(lambda x: x != "\n", actContent))
+                    
+            with open(fpp_cache + "/" + file, "w") as check:
+                check.writelines(actContent)
 
         shutil.rmtree(fpp_cache + "/tmp", ignore_errors=True)
 
