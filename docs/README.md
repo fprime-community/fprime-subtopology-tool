@@ -9,6 +9,7 @@
 - [Syntax.md](./Syntax.md) - information about syntax in fpp files for this tool
 - [Example.md](./Example.md) - documentation for an example project that uses this tool
 - [Design.md](./Design.md) - design methodology for this tool
+- [Interfaces.md](./Interfaces.md) - design and implementation of formal subtopology interfaces
 
 ## Overview
 
@@ -23,7 +24,7 @@ topology MyST {}
 @<! }
 ```
 
-within a single file is taken and two files are generated in the build cache: `<dynamic>.subtopologies.fpp`, and `st-locs.fpp`, which define the subtopology instance and location of new definitions respectfully.
+within a single file is taken and two files are generated in the build cache: `<dynamic>.subtopologies.fpp`, and `st-locs.fpp`, which define the subtopology instance and location of new definitions respectfully. Additionally, this tool allows for creating formal interfaces into and out of subtopologies. Read more about them in the [Interfaces.md](./Interfaces.md) document.
 
 We must make clear that the terminology "subtopology instance" is used only for simplicity in understanding, but technically is not correct. Within F Prime, topologies do not have a first-party sense of "class", and so the final output of this tool provides a *modified duplication* of the defined subtopology. So in the above example, **MyST** becomes a modified duplication of the topology defined at **st.st**. 
 

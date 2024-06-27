@@ -1,43 +1,20 @@
 import fpp_json_ast_parser as Parser
 import fpp_interface as fpp
-import sys
 import os
 import shutil
 
 
-def component_to_local(component: Parser.InstanceParser):
-    """
-    This function checks if a component is local to the topology it is defined in based on
-    the instance definition in the topology. In the current version of the tool, this
-    function is not used.
-
-    Args:
-        component: The component to check if it is local to the topology
-
-    Returns:
-        None
-    """
-
-    preannotation = component.instance_preannot
-    if preannotation is None or preannotation == "" or preannotation == []:
-        return
-
-    preannotation = preannotation[0]
-    if "!" != preannotation[0] or preannotation == "" or preannotation is None:
-        return print(f"[ERR] Component {component.instance_name} is not special")
-    else:
-        preannotation = preannotation[2:]
-
-    if "local to topology" in preannotation:
-        print(f"[INFO] Component {component.instance_name} is local to topology")
-
-    # topology should be the last element of preannotation
-    topology = preannotation.split(" ")[-1]
-
-    return {"component": component, "linkedTopology": topology}
-
-
 def topology_to_instance(topology: Parser.TopologyParser):
+    """
+    Turn a topology provided by the parser into a topology instance that can be written to
+    an fpp file.
+    
+    Args:
+        topology: The topology to turn into an instance
+        
+    Returns:
+        instanceDetails: The instance details for the topology
+    """
     postannotation = topology.topology_postannot
 
     if postannotation is None or postannotation == []:
@@ -125,17 +102,16 @@ def topology_to_instance(topology: Parser.TopologyParser):
                                 )
 
                     if error:
-                        print(
+                        raise Exception(
                             f"[ERR] Topology instance {topology.topology_name} has an invalid magic annotation"
                         )
                         # we NEED to hard exit
-                        sys.exit(1)
                     if not endBracket:
-                        print(
+                        raise Exception(
                             f"[ERR] Expected }} to close magic annotation of {topology.topology_name} instance but found nothing."
                         )
-                        sys.exit(1)
     return instanceDetails
+
 
 def module_walker(AST, qf, type, type_parser):
     """
@@ -161,8 +137,17 @@ def module_walker(AST, qf, type, type_parser):
             if module.module_name == qf[0] and len(qf) > 1:
                 for _m in module.members():
                     if "DefModule" in _m[1]:
-                        return module_walker(_m, ".".join(qf[1:]), type)
-                    elif type in _m[1]:
+                        moduleDeeper = Parser.ModuleParser(_m)
+                        moduleDeeper.parse()
+
+                        if moduleDeeper.module_name == qf[1] and len(qf) > 2:
+                            return module_walker(
+                                moduleDeeper.members(),
+                                ".".join(qf[1:]),
+                                type,
+                                type_parser,
+                            )
+                    if type in _m[1]:
                         _type = type_parser(_m)
                         _type.parse()
 
@@ -186,10 +171,10 @@ def writeFppFile(file, content):
     """
 
     # check if the directory exists
-    if "/" in file:
-        directory = file[: file.rfind("/")]
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    # if "/" in file:
+    #     directory = file[: file.rfind("/")]
+    #     if not os.path.exists(directory):
+    #         os.makedirs(directory)
 
     with open(file, "w") as f:
         f.write(content)
@@ -202,8 +187,7 @@ def writeFppFile(file, content):
         f.write(postFormat)
         f.close()
     except:
-        print("[ERR] fpp-format failed")
-        sys.exit(1)
+        raise Exception("[ERR] fpp-format failed")
 
     return file
 
@@ -221,7 +205,7 @@ def quickFileScan(path):
     return False
 
 
-def updateDependencies(fpp_cache, path, locs: list):
+def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
     """
     This function updates the dependency cache files for a module. This tells the future
     autocoder what the dependencies are for the new subtopology we made.
@@ -254,6 +238,9 @@ def updateDependencies(fpp_cache, path, locs: list):
                         if ".subtopologies.fpp" in line:
                             continue
 
+                        if "/ST-Interface/" in line:
+                            continue
+
                         if "/instances.fpp" in line:
                             continue
 
@@ -263,12 +250,29 @@ def updateDependencies(fpp_cache, path, locs: list):
 
                         out.write(line)
 
+            actContent = []
+            with open(fpp_cache + "/" + file, "r") as check:
+                for line in check:
+                    if "/ST-Interface/" in line:
+                        continue
+
+                    for replacement in dependency_replacements:
+                        if replacement["from"] in line:
+                            line = replacement["to"]
+
+                    if line != " NONE ":
+                        actContent.append(line)
+
+            actContent = list(filter(lambda x: x != "\n", actContent))
+
+            with open(fpp_cache + "/" + file, "w") as check:
+                check.writelines(actContent)
+
         shutil.rmtree(fpp_cache + "/tmp", ignore_errors=True)
 
         print("[INFO] Updated dependency cache files")
     except Exception as e:
-        print(f"[ERR] Failed to update dependency cache files: {e}")
-        sys.exit(1)
+        raise Exception(f"[ERR] Failed to update dependency cache files: {e}")
 
     return 1
 
@@ -285,7 +289,7 @@ def cleanMainFppFile(path):
     removingTopology = False
     removedTopology = False
     for i in range(len(lines)):
-        if f"topology" in lines[i] and "@<!" in lines[i+1]:
+        if f"topology" in lines[i] and "@<!" in lines[i + 1]:
             lines[i] = ""
             removingTopology = True
             removedTopology = True
@@ -306,7 +310,8 @@ def cleanMainFppFile(path):
         return 1
     else:
         return 0
-    
+
+
 def removeFromMainLocs(path, qf):
     """
     Remove the subtopology instance from the locs file
@@ -319,7 +324,7 @@ def removeFromMainLocs(path, qf):
         if qf in lines[i]:
             lines[i] = ""
             break
-            
+
     with open(path, "w") as f:
         f.writelines(lines)
 
@@ -367,8 +372,6 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
         topology_in: The topology instance to rewrite the phase function calls for
     """
 
-    print(f"[INFO] Rewriting phase function calls for {component.qf}...")
-
     modules_to_generate = topology_in["qf"].split(".")
     topology_to_generate = modules_to_generate.pop()
     instance_name = component.instance_name.split(".")[-1]
@@ -379,6 +382,7 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
             component.instance_elements["phases"][phase] is not None
             and component.instance_elements["phases"][phase] != ""
         ):
+            print(f"[INFO] Rewriting phase function calls for {component.qf}...")
             code = component.instance_elements["phases"][phase]
 
             word = ""
