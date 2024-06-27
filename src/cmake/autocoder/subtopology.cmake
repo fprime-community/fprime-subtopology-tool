@@ -1,6 +1,6 @@
 include(autocoder/helpers)
 
-set(PYTHON_TOOL "/Users/amosalla/JPL/348C/subtopology-ac-testing/ac-tool/src/ac_tool/tool.py")
+set(PYTHON_TOOL "/Absolute/Path/To/tool.py")
 
 autocoder_setup_for_individual_sources()
 
