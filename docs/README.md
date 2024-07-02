@@ -10,6 +10,7 @@
 - [Example.md](./Example.md) - documentation for an example project that uses this tool
 - [Design.md](./Design.md) - design methodology for this tool
 - [Interfaces.md](./Interfaces.md) - design and implementation of formal subtopology interfaces
+- [Fpp.md](./Fpp.md) - recommendations for [syntax](./Syntax.md) integration into native fpp
 
 ## Overview
 

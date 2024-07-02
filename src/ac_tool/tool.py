@@ -40,16 +40,6 @@ def walkModule(data, oldQf):
         if "DefModule" in member[1]:
             walkModule(member, qf)
 
-        # if "DefConstant" in member[1]:
-        #     constant = Parser.ConstantParser(member)
-        #     constant.parse()
-
-        #     isTopologyInstance = Utils.constant_to_subtopology_instance(constant)
-
-        #     if isTopologyInstance:
-        #         isTopologyInstance["qf"] = qf + "." + constant.constant_Id
-        #         TOPOLOGIES_TO_INSTANTIATE.append(isTopologyInstance)
-
     return qf
 
 
