@@ -1,6 +1,6 @@
 include(autocoder/helpers)
 
-set(PYTHON_TOOL "/Absolute/Path/To/tool.py")
+set(PYTHON_TOOL "${CMAKE_CURRENT_LIST_DIR}/../../ac_tool/tool.py")
 
 autocoder_setup_for_individual_sources()
 
