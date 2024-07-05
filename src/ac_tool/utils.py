@@ -375,16 +375,16 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
     modules_to_generate = topology_in["qf"].split(".")
     topology_to_generate = modules_to_generate.pop()
     instance_name = component.instance_name.split(".")[-1]
-    new_function_name = f"__{topology_to_generate}_instances_{'_'.join(modules_to_generate)}_{instance_name}"
+    new_function_name = f"__{topology_to_generate}_instances_{instance_name}"
 
     for phase in component.instance_elements["phases"]:
         if (
             component.instance_elements["phases"][phase] is not None
             and component.instance_elements["phases"][phase] != ""
         ):
-            print(f"[INFO] Rewriting phase function calls for {component.qf}...")
+            print(f"[INFO] Rewriting phase {phase} function calls for {component.qf}...")
             code = component.instance_elements["phases"][phase]
-
+            
             word = ""
             for character in code:
                 if character in [
