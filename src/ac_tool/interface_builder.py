@@ -157,8 +157,8 @@ def interface_replacer(
                 if not instance_already_specified(instances, instName):
                     instances.append(FppWriter.FppInstanceSpec(instName))
 
-                for connection in main_topology_cg.connections():
-                    if input_source in connection["dest"]["name"]:
+                for connection in main_topology_cg.cg_connections:
+                    if input_source in connection["source"]["name"]:
                         new_cg.save_connection(
                             {"source": replaceWith, "dest": connection["dest"]}
                         )

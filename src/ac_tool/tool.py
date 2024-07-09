@@ -191,7 +191,7 @@ def topology_to_instance(topology_in):
         if topology == topology_in:
             topology["og_file"] = str(Path(str(topology_file)).resolve())
             break
-
+        
     topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
@@ -502,6 +502,7 @@ def main():
     except Exception as e:
         print(str(e))
         cleanFppASTCache()
+        raise
         sys.exit(1)
 
 
