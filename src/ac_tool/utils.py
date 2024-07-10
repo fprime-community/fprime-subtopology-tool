@@ -210,7 +210,7 @@ def quickFileScan(path):
     return False
 
 
-def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
+def updateDependencies(fpp_cache, path, locs: list, dependency_replacements, removedTops):
     """
     This function updates the dependency cache files for a module. This tells the future
     autocoder what the dependencies are for the new subtopology we made.
@@ -235,6 +235,22 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
             "unittest.txt",
             "stdout.txt",
         ]
+        
+        topologyGeneratedFilePostfixes = [
+            "TopologyAc.cpp",
+            "TopologyAc.hpp",
+            "TopologyAppAi.xml",
+            "TopologyDictionary.json"
+        ]
+        
+        FilesToRemove = []
+        
+        for removedTop in removedTops:
+            FilesToRemove.append(
+                list(map(lambda x: removedTop + x, topologyGeneratedFilePostfixes))
+            )
+            
+            print(FilesToRemove)
 
         for file in dependencyFiles:
             with open(fpp_cache + "/tmp/" + file, "r") as f:
@@ -259,6 +275,18 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
             with open(fpp_cache + "/" + file, "r") as check:
                 for line in check:
                     if "/ST-Interface/" in line:
+                        continue
+                    
+                    lineNeedsToBeRemoved = False
+                    for removeSet in FilesToRemove:
+                        for remove in removeSet:
+                            print(remove, line)
+                            if remove in line:
+                                lineNeedsToBeRemoved = True
+                                break
+                    
+                    print(lineNeedsToBeRemoved)
+                    if lineNeedsToBeRemoved:
                         continue
 
                     for replacement in dependency_replacements:
@@ -415,7 +443,7 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
                 word += character
             component.instance_elements["phases"][phase] = code
 
-def removeEmptyTopology(file, locs, topology):
+def removeEmptyTopology(file, main_file, locs, topology):
     """
     Remove the empty topology from the main fpp file
     """
@@ -442,11 +470,13 @@ def removeEmptyTopology(file, locs, topology):
             if f"topology {topology}" in lines[i]:
                 removingTopology = True
                 removedTopology = False
+                lines[i] = ""
                 continue
 
             if removingTopology and "}" in lines[i]:
                 removingTopology = False
                 removedTopology = True
+                lines[i] = ""
                 continue
             
             if removingTopology:
@@ -455,4 +485,19 @@ def removeEmptyTopology(file, locs, topology):
     
         with open(file, "w") as f:
             f.writelines(lines)
+    
+        with open(main_file, "r") as f:
+            lines = f.readlines()
+            
+        for i in range(len(lines)):
+            if f"import {topology}" in lines[i]:
+                lines[i] = ""
+                break
+                
+        with open(main_file, "w") as f:
+            f.writelines(lines)
+            
+        return 1
+    
+    return 0
     

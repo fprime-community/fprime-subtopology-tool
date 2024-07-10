@@ -16,6 +16,7 @@ ST_INTERFACES = {}
 FPP_AST_CACHE = []
 DEPENDENCY_REPLACE = []
 PATTERNED_EXPORTS = []
+REMOVED_TOPOLOGIES = []
 
 
 def walkModule(data, oldQf):
@@ -458,13 +459,13 @@ def main():
             raise Exception(f"Failed to write final subtopologies file: {e}")
 
         try:
-            newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
+            # newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
             dirOfOutput = os.path.dirname(FPP_OUTPUT)
 
-            Utils.writeFppFile(
-                f"{dirOfOutput}/st-locs.fpp",
-                newLocs,
-            )
+            # Utils.writeFppFile(
+            #     f"{dirOfOutput}/st-locs.fpp",
+            #     newLocs,
+            # )
 
             # clean up new source file
             filename = os.path.basename(FPP_INPUT) if not IN_TEST else "main.out.fpp"
@@ -498,7 +499,17 @@ def main():
                     FPP_OUTPUT, ST_INTERFACES[topology["qf"]]
                 )
                 
-                Utils.removeEmptyTopology(FPP_OUTPUT, FPP_LOCS, topology["qf"])
+                removedTop = Utils.removeEmptyTopology(FPP_OUTPUT, f"{dirOfOutput}/../{filename}", FPP_LOCS, topology["qf"])
+                
+                
+                if removedTop:
+                    REMOVED_TOPOLOGIES.append(topology['qf'].split(".")[-1])
+                
+                newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
+                Utils.writeFppFile(
+                    f"{dirOfOutput}/st-locs.fpp",
+                    newLocs,
+                )
 
                 DEPENDENCY_REPLACE.append({"from": topology["og_file"], "to": " NONE "})
 
@@ -508,6 +519,7 @@ def main():
                 FPP_OUTPUT,
                 [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"],
                 DEPENDENCY_REPLACE,
+                REMOVED_TOPOLOGIES
             )
 
         TOPOLOGIES_TO_INSTANTIATE.clear()
