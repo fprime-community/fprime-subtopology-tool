@@ -80,7 +80,7 @@ topology ST {
 }
 ```
 
-The `@! export` syntax applies to any patterned connection graph type.
+The `@! export` syntax applies to any patterned connection graph type. It also is especially useful if `Tlm` is defined as a local instance, as the syntax will ensure that the patterned connection graph name is renamed.
 
 ## In the main topology
 
