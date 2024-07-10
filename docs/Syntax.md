@@ -63,6 +63,25 @@ module Main {
 }
 ```
 
+### Exporting patterned connection graphs
+
+While seeming like a niche application, it may be the case that one would like to have a patterned connection graph be defined inside the subtopology, but apply to the importing topology. 
+
+For example, `ST` can be a subtopology for a telemetry component, which instantiates component `Tlm` that can be the source for the `telemetry` patterned connection graph. The developer of `ST` would like `Tlm` to be able to hook up to all potential component instances in the parent topology `Main`. 
+
+This can be done with the syntax:
+
+```
+topology ST {
+    instance Tlm
+
+    @! export
+    telemetry connection instance Tlm
+}
+```
+
+The `@! export` syntax applies to any patterned connection graph type.
+
 ## In the main topology
 
 In the main topology, we want to be able to define that we want to use our subtopology. Following the above example, `Main.ST` is our subtopology. The following is the syntax to define a subtopology instance in your main deployment's topology fpp file:
