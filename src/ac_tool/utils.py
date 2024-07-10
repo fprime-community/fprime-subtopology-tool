@@ -2,6 +2,7 @@ import fpp_json_ast_parser as Parser
 import fpp_interface as fpp
 import os
 import shutil
+import tool as MainTool
 
 
 def topology_to_instance(topology: Parser.TopologyParser):
@@ -175,6 +176,10 @@ def writeFppFile(file, content):
     #     directory = file[: file.rfind("/")]
     #     if not os.path.exists(directory):
     #         os.makedirs(directory)
+    
+    # make directories if they don't exist
+    if not os.path.exists(os.path.dirname(file)):
+        os.makedirs(os.path.dirname(file))
 
     with open(file, "w") as f:
         f.write(content)
@@ -409,3 +414,45 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
 
                 word += character
             component.instance_elements["phases"][phase] = code
+
+def removeEmptyTopology(file, locs, topology):
+    """
+    Remove the empty topology from the main fpp file
+    """
+
+    subtopology = MainTool.openFppFile(file, locs, True)
+    
+    theTopology = module_walker(subtopology[0]["members"], topology, "DefTopology", Parser.TopologyParser)
+    
+    cgs = 0
+    for member in theTopology.members():
+        if "SpecConnectionGraph" in member[1]:
+            cgs += 1
+                        
+    if cgs == 0:
+        with open(file, "r") as f:
+            lines = f.readlines()
+            
+        removingTopology = False
+        removedTopology = False
+        
+        topology = topology.split(".")[-1]
+        
+        for i in range(len(lines)):
+            if f"topology {topology}" in lines[i]:
+                removingTopology = True
+                removedTopology = False
+                continue
+
+            if removingTopology and "}" in lines[i]:
+                removingTopology = False
+                removedTopology = True
+                continue
+            
+            if removingTopology:
+                lines[i] = ""
+                continue
+    
+        with open(file, "w") as f:
+            f.writelines(lines)
+    

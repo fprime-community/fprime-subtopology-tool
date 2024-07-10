@@ -15,6 +15,7 @@ WRITTEN_FILE_PIECES = []
 ST_INTERFACES = {}
 FPP_AST_CACHE = []
 DEPENDENCY_REPLACE = []
+PATTERNED_EXPORTS = []
 
 
 def walkModule(data, oldQf):
@@ -342,6 +343,12 @@ def generateFppFile(toRebuild, topology_in):
     # )
 
     fileContent += FppWriter.FppTopology(topology_to_generate).open() + "\n"
+    
+    if len(toRebuild["connections"]) == 0:
+        fileContent += FppWriter.FppTopology(topology_to_generate).close() + "\n"
+        fileContent += moduleClosures
+        WRITTEN_FILE_PIECES.append(fileContent)
+        return
 
     if len(toRebuild["imports"]) > 0:
         for imp in toRebuild["imports"]:
@@ -355,6 +362,16 @@ def generateFppFile(toRebuild, topology_in):
 
     if len(toRebuild["connections"]) > 0:
         for connection in toRebuild["connections"]:
+            preannot = connection.cg_preannot
+            
+            if connection.cg_name in toRebuild["locals"] and connection.cg_type != "Direct":
+                connection.cg_name = f"__{topology_to_generate}_instances.{connection.cg_name.split('.')[-1]}"
+                
+            if preannot is not None and len(preannot) > 0:
+                if "! export" == preannot[0]:
+                    PATTERNED_EXPORTS.append(connection)
+                    continue
+                
             fileContent += connection.write() + "\n"
 
     fileContent += "}\n"
@@ -452,8 +469,8 @@ def main():
             # clean up new source file
             filename = os.path.basename(FPP_INPUT) if not IN_TEST else "main.out.fpp"
 
-            shutil.copyfile(FPP_INPUT, f"{dirOfOutput}/{filename}")
-            Utils.cleanMainFppFile(f"{dirOfOutput}/{filename}")
+            shutil.copyfile(FPP_INPUT, f"{dirOfOutput}/../{filename}")
+            Utils.cleanMainFppFile(f"{dirOfOutput}/../{filename}")
         except Exception as e:
             raise Exception(f"Failed to write new locs file: {e}")
 
@@ -467,18 +484,21 @@ def main():
                 print(f"[INFO] Generating interface for {topologyName}...")
                 InterfaceBuilder.interface_entrypoint(
                     FPP_OUTPUT,
-                    f"{dirOfOutput}/{filename}",
+                    f"{dirOfOutput}/../{filename}",
                     FPP_LOCS,
                     topologyName,
                     ST_INTERFACES[topology["qf"]],
+                    PATTERNED_EXPORTS
                 )
 
                 InterfaceBuilder.removeInterfaces(
-                    f"{dirOfOutput}/{filename}", ST_INTERFACES[topology["qf"]]
+                    f"{dirOfOutput}/../{filename}", ST_INTERFACES[topology["qf"]]
                 )
                 InterfaceBuilder.removeInterfaces(
                     FPP_OUTPUT, ST_INTERFACES[topology["qf"]]
                 )
+                
+                Utils.removeEmptyTopology(FPP_OUTPUT, FPP_LOCS, topology["qf"])
 
                 DEPENDENCY_REPLACE.append({"from": topology["og_file"], "to": " NONE "})
 
