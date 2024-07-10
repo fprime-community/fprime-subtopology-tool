@@ -15,6 +15,8 @@ WRITTEN_FILE_PIECES = []
 ST_INTERFACES = {}
 FPP_AST_CACHE = []
 DEPENDENCY_REPLACE = []
+PATTERNED_EXPORTS = []
+REMOVED_TOPOLOGIES = []
 
 
 def walkModule(data, oldQf):
@@ -191,7 +193,7 @@ def topology_to_instance(topology_in):
         if topology == topology_in:
             topology["og_file"] = str(Path(str(topology_file)).resolve())
             break
-
+        
     topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
@@ -342,6 +344,12 @@ def generateFppFile(toRebuild, topology_in):
     # )
 
     fileContent += FppWriter.FppTopology(topology_to_generate).open() + "\n"
+    
+    if len(toRebuild["connections"]) == 0:
+        fileContent += FppWriter.FppTopology(topology_to_generate).close() + "\n"
+        fileContent += moduleClosures
+        WRITTEN_FILE_PIECES.append(fileContent)
+        return
 
     if len(toRebuild["imports"]) > 0:
         for imp in toRebuild["imports"]:
@@ -355,6 +363,16 @@ def generateFppFile(toRebuild, topology_in):
 
     if len(toRebuild["connections"]) > 0:
         for connection in toRebuild["connections"]:
+            preannot = connection.cg_preannot
+            
+            if connection.cg_name in toRebuild["locals"] and connection.cg_type != "Direct":
+                connection.cg_name = f"__{topology_to_generate}_instances.{connection.cg_name.split('.')[-1]}"
+                
+            if preannot is not None and len(preannot) > 0:
+                if "! export" == preannot[0]:
+                    PATTERNED_EXPORTS.append(connection)
+                    continue
+                
             fileContent += connection.write() + "\n"
 
     fileContent += "}\n"
@@ -441,19 +459,19 @@ def main():
             raise Exception(f"Failed to write final subtopologies file: {e}")
 
         try:
-            newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
+            # newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
             dirOfOutput = os.path.dirname(FPP_OUTPUT)
 
-            Utils.writeFppFile(
-                f"{dirOfOutput}/st-locs.fpp",
-                newLocs,
-            )
+            # Utils.writeFppFile(
+            #     f"{dirOfOutput}/st-locs.fpp",
+            #     newLocs,
+            # )
 
             # clean up new source file
             filename = os.path.basename(FPP_INPUT) if not IN_TEST else "main.out.fpp"
 
-            shutil.copyfile(FPP_INPUT, f"{dirOfOutput}/{filename}")
-            Utils.cleanMainFppFile(f"{dirOfOutput}/{filename}")
+            shutil.copyfile(FPP_INPUT, f"{dirOfOutput}/../{filename}")
+            Utils.cleanMainFppFile(f"{dirOfOutput}/../{filename}")
         except Exception as e:
             raise Exception(f"Failed to write new locs file: {e}")
 
@@ -467,17 +485,30 @@ def main():
                 print(f"[INFO] Generating interface for {topologyName}...")
                 InterfaceBuilder.interface_entrypoint(
                     FPP_OUTPUT,
-                    f"{dirOfOutput}/{filename}",
+                    f"{dirOfOutput}/../{filename}",
                     FPP_LOCS,
                     topologyName,
                     ST_INTERFACES[topology["qf"]],
+                    PATTERNED_EXPORTS
                 )
 
                 InterfaceBuilder.removeInterfaces(
-                    f"{dirOfOutput}/{filename}", ST_INTERFACES[topology["qf"]]
+                    f"{dirOfOutput}/../{filename}", ST_INTERFACES[topology["qf"]]
                 )
                 InterfaceBuilder.removeInterfaces(
                     FPP_OUTPUT, ST_INTERFACES[topology["qf"]]
+                )
+                
+                removedTop = Utils.removeEmptyTopology(FPP_OUTPUT, f"{dirOfOutput}/../{filename}", FPP_LOCS, topology["qf"])
+                
+                
+                if removedTop:
+                    REMOVED_TOPOLOGIES.append(topology['qf'].split(".")[-1])
+                
+                newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
+                Utils.writeFppFile(
+                    f"{dirOfOutput}/st-locs.fpp",
+                    newLocs,
                 )
 
                 DEPENDENCY_REPLACE.append({"from": topology["og_file"], "to": " NONE "})
@@ -488,6 +519,7 @@ def main():
                 FPP_OUTPUT,
                 [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"],
                 DEPENDENCY_REPLACE,
+                REMOVED_TOPOLOGIES
             )
 
         TOPOLOGIES_TO_INSTANTIATE.clear()
@@ -502,6 +534,7 @@ def main():
     except Exception as e:
         print(str(e))
         cleanFppASTCache()
+        raise
         sys.exit(1)
 
 

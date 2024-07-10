@@ -2,6 +2,7 @@ import fpp_json_ast_parser as Parser
 import fpp_interface as fpp
 import os
 import shutil
+import tool as MainTool
 
 
 def topology_to_instance(topology: Parser.TopologyParser):
@@ -175,6 +176,10 @@ def writeFppFile(file, content):
     #     directory = file[: file.rfind("/")]
     #     if not os.path.exists(directory):
     #         os.makedirs(directory)
+    
+    # make directories if they don't exist
+    if not os.path.exists(os.path.dirname(file)):
+        os.makedirs(os.path.dirname(file))
 
     with open(file, "w") as f:
         f.write(content)
@@ -205,7 +210,7 @@ def quickFileScan(path):
     return False
 
 
-def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
+def updateDependencies(fpp_cache, path, locs: list, dependency_replacements, removedTops):
     """
     This function updates the dependency cache files for a module. This tells the future
     autocoder what the dependencies are for the new subtopology we made.
@@ -230,6 +235,22 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
             "unittest.txt",
             "stdout.txt",
         ]
+        
+        topologyGeneratedFilePostfixes = [
+            "TopologyAc.cpp",
+            "TopologyAc.hpp",
+            "TopologyAppAi.xml",
+            "TopologyDictionary.json"
+        ]
+        
+        FilesToRemove = []
+        
+        for removedTop in removedTops:
+            FilesToRemove.append(
+                list(map(lambda x: removedTop + x, topologyGeneratedFilePostfixes))
+            )
+            
+            print(FilesToRemove)
 
         for file in dependencyFiles:
             with open(fpp_cache + "/tmp/" + file, "r") as f:
@@ -254,6 +275,18 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements):
             with open(fpp_cache + "/" + file, "r") as check:
                 for line in check:
                     if "/ST-Interface/" in line:
+                        continue
+                    
+                    lineNeedsToBeRemoved = False
+                    for removeSet in FilesToRemove:
+                        for remove in removeSet:
+                            print(remove, line)
+                            if remove in line:
+                                lineNeedsToBeRemoved = True
+                                break
+                    
+                    print(lineNeedsToBeRemoved)
+                    if lineNeedsToBeRemoved:
                         continue
 
                     for replacement in dependency_replacements:
@@ -409,3 +442,62 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
 
                 word += character
             component.instance_elements["phases"][phase] = code
+
+def removeEmptyTopology(file, main_file, locs, topology):
+    """
+    Remove the empty topology from the main fpp file
+    """
+
+    subtopology = MainTool.openFppFile(file, locs, True)
+    
+    theTopology = module_walker(subtopology[0]["members"], topology, "DefTopology", Parser.TopologyParser)
+    
+    cgs = 0
+    for member in theTopology.members():
+        if "SpecConnectionGraph" in member[1]:
+            cgs += 1
+                        
+    if cgs == 0:
+        with open(file, "r") as f:
+            lines = f.readlines()
+            
+        removingTopology = False
+        removedTopology = False
+        
+        topology = topology.split(".")[-1]
+        
+        for i in range(len(lines)):
+            if f"topology {topology}" in lines[i]:
+                removingTopology = True
+                removedTopology = False
+                lines[i] = ""
+                continue
+
+            if removingTopology and "}" in lines[i]:
+                removingTopology = False
+                removedTopology = True
+                lines[i] = ""
+                continue
+            
+            if removingTopology:
+                lines[i] = ""
+                continue
+    
+        with open(file, "w") as f:
+            f.writelines(lines)
+    
+        with open(main_file, "r") as f:
+            lines = f.readlines()
+            
+        for i in range(len(lines)):
+            if f"import {topology}" in lines[i]:
+                lines[i] = ""
+                break
+                
+        with open(main_file, "w") as f:
+            f.writelines(lines)
+            
+        return 1
+    
+    return 0
+    

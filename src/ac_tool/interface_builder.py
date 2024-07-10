@@ -10,7 +10,6 @@ import argparse
 import sys
 from pathlib import Path
 
-
 def quickInterfaceCheck(pathToFile, topologyName):
     with open(pathToFile, "r") as f:
         fileContents = f.read()
@@ -21,7 +20,7 @@ def quickInterfaceCheck(pathToFile, topologyName):
     return False
 
 
-def clean_cg_from_file(cg_name, path_to_file, include):
+def clean_cg_from_file(cg_name, path_to_file, include, PATTERNED_EXPORTS):
     with open(path_to_file, "r") as f:
         fileContents = f.read()
 
@@ -37,6 +36,11 @@ def clean_cg_from_file(cg_name, path_to_file, include):
 
                 if "Interface_" in cg_name:
                     actualContent.append(include)
+                    
+                    for patterned in PATTERNED_EXPORTS:
+                        # actualContent.append(f"instance {patterned.cg_name}")
+                        actualContent.append(patterned.write())
+                    
                     continue
             continue
 
@@ -95,7 +99,7 @@ def interface_replacer(
 
             if cg.cg_name == "Interface":
                 subtopology_cg = cg
-                break
+                continue
 
     for member in main_topology.members():
         if "SpecConnectionGraph" in member[1]:
@@ -157,8 +161,8 @@ def interface_replacer(
                 if not instance_already_specified(instances, instName):
                     instances.append(FppWriter.FppInstanceSpec(instName))
 
-                for connection in main_topology_cg.connections():
-                    if input_source in connection["dest"]["name"]:
+                for connection in main_topology_cg.cg_connections:
+                    if input_source in connection["source"]["name"]:
                         new_cg.save_connection(
                             {"source": replaceWith, "dest": connection["dest"]}
                         )
@@ -168,7 +172,7 @@ def interface_replacer(
 
 
 def interface_entrypoint(
-    pathToSubtopology, pathToMainTopology, locs, topologyName, ST_Interfaces
+    pathToSubtopology, pathToMainTopology, locs, topologyName, ST_Interfaces, PATTERNED_EXPORTS
 ):
     subtopology = MainTool.openFppFile(pathToSubtopology, locs, True)
     main_topology = MainTool.openFppFile(pathToMainTopology, locs, True)
@@ -215,8 +219,8 @@ def interface_entrypoint(
         f"./{topologyName}_interface.fppi", new_cg, instances
     )
 
-    clean_cg_from_file(f"Interface_{topologyName}", pathToMainTopology, include_file)
-    clean_cg_from_file(f"Interface", pathToSubtopology, include_file)
+    clean_cg_from_file(f"Interface_{topologyName}", pathToMainTopology, include_file, PATTERNED_EXPORTS)
+    clean_cg_from_file(f"Interface", pathToSubtopology, include_file, [])
 
 
 def removeInterfaces(path, interface):
