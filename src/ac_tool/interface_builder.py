@@ -10,6 +10,7 @@ import argparse
 import sys
 from pathlib import Path
 
+
 def quickInterfaceCheck(pathToFile, topologyName):
     with open(pathToFile, "r") as f:
         fileContents = f.read()
@@ -36,11 +37,11 @@ def clean_cg_from_file(cg_name, path_to_file, include, PATTERNED_EXPORTS):
 
                 if "Interface_" in cg_name:
                     actualContent.append(include)
-                    
+
                     for patterned in PATTERNED_EXPORTS:
                         # actualContent.append(f"instance {patterned.cg_name}")
                         actualContent.append(patterned.write())
-                    
+
                     continue
             continue
 
@@ -172,7 +173,12 @@ def interface_replacer(
 
 
 def interface_entrypoint(
-    pathToSubtopology, pathToMainTopology, locs, topologyName, ST_Interfaces, PATTERNED_EXPORTS
+    pathToSubtopology,
+    pathToMainTopology,
+    locs,
+    topologyName,
+    ST_Interfaces,
+    PATTERNED_EXPORTS,
 ):
     subtopology = MainTool.openFppFile(pathToSubtopology, locs, True)
     main_topology = MainTool.openFppFile(pathToMainTopology, locs, True)
@@ -219,7 +225,9 @@ def interface_entrypoint(
         f"./{topologyName}_interface.fppi", new_cg, instances
     )
 
-    clean_cg_from_file(f"Interface_{topologyName}", pathToMainTopology, include_file, PATTERNED_EXPORTS)
+    clean_cg_from_file(
+        f"Interface_{topologyName}", pathToMainTopology, include_file, PATTERNED_EXPORTS
+    )
     clean_cg_from_file(f"Interface", pathToSubtopology, include_file, [])
 
 

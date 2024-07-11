@@ -9,10 +9,10 @@ def topology_to_instance(topology: Parser.TopologyParser):
     """
     Turn a topology provided by the parser into a topology instance that can be written to
     an fpp file.
-    
+
     Args:
         topology: The topology to turn into an instance
-        
+
     Returns:
         instanceDetails: The instance details for the topology
     """
@@ -176,7 +176,7 @@ def writeFppFile(file, content):
     #     directory = file[: file.rfind("/")]
     #     if not os.path.exists(directory):
     #         os.makedirs(directory)
-    
+
     # make directories if they don't exist
     if not os.path.exists(os.path.dirname(file)):
         os.makedirs(os.path.dirname(file))
@@ -210,7 +210,9 @@ def quickFileScan(path):
     return False
 
 
-def updateDependencies(fpp_cache, path, locs: list, dependency_replacements, removedTops):
+def updateDependencies(
+    fpp_cache, path, locs: list, dependency_replacements, removedTops
+):
     """
     This function updates the dependency cache files for a module. This tells the future
     autocoder what the dependencies are for the new subtopology we made.
@@ -235,21 +237,21 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements, rem
             "unittest.txt",
             "stdout.txt",
         ]
-        
+
         topologyGeneratedFilePostfixes = [
             "TopologyAc.cpp",
             "TopologyAc.hpp",
             "TopologyAppAi.xml",
-            "TopologyDictionary.json"
+            "TopologyDictionary.json",
         ]
-        
+
         FilesToRemove = []
-        
+
         for removedTop in removedTops:
             FilesToRemove.append(
                 list(map(lambda x: removedTop + x, topologyGeneratedFilePostfixes))
             )
-            
+
             print(FilesToRemove)
 
         for file in dependencyFiles:
@@ -276,7 +278,7 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements, rem
                 for line in check:
                     if "/ST-Interface/" in line:
                         continue
-                    
+
                     lineNeedsToBeRemoved = False
                     for removeSet in FilesToRemove:
                         for remove in removeSet:
@@ -284,7 +286,7 @@ def updateDependencies(fpp_cache, path, locs: list, dependency_replacements, rem
                             if remove in line:
                                 lineNeedsToBeRemoved = True
                                 break
-                    
+
                     print(lineNeedsToBeRemoved)
                     if lineNeedsToBeRemoved:
                         continue
@@ -415,9 +417,11 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
             component.instance_elements["phases"][phase] is not None
             and component.instance_elements["phases"][phase] != ""
         ):
-            print(f"[INFO] Rewriting phase {phase} function calls for {component.qf}...")
+            print(
+                f"[INFO] Rewriting phase {phase} function calls for {component.qf}..."
+            )
             code = component.instance_elements["phases"][phase]
-            
+
             word = ""
             for character in code:
                 if character in [
@@ -443,29 +447,32 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
                 word += character
             component.instance_elements["phases"][phase] = code
 
+
 def removeEmptyTopology(file, main_file, locs, topology):
     """
     Remove the empty topology from the main fpp file
     """
 
     subtopology = MainTool.openFppFile(file, locs, True)
-    
-    theTopology = module_walker(subtopology[0]["members"], topology, "DefTopology", Parser.TopologyParser)
-    
+
+    theTopology = module_walker(
+        subtopology[0]["members"], topology, "DefTopology", Parser.TopologyParser
+    )
+
     cgs = 0
     for member in theTopology.members():
         if "SpecConnectionGraph" in member[1]:
             cgs += 1
-                        
+
     if cgs == 0:
         with open(file, "r") as f:
             lines = f.readlines()
-            
+
         removingTopology = False
         removedTopology = False
-        
+
         topology = topology.split(".")[-1]
-        
+
         for i in range(len(lines)):
             if f"topology {topology}" in lines[i]:
                 removingTopology = True
@@ -478,26 +485,25 @@ def removeEmptyTopology(file, main_file, locs, topology):
                 removedTopology = True
                 lines[i] = ""
                 continue
-            
+
             if removingTopology:
                 lines[i] = ""
                 continue
-    
+
         with open(file, "w") as f:
             f.writelines(lines)
-    
+
         with open(main_file, "r") as f:
             lines = f.readlines()
-            
+
         for i in range(len(lines)):
             if f"import {topology}" in lines[i]:
                 lines[i] = ""
                 break
-                
+
         with open(main_file, "w") as f:
             f.writelines(lines)
-            
+
         return 1
-    
+
     return 0
-    

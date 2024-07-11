@@ -193,7 +193,7 @@ def topology_to_instance(topology_in):
         if topology == topology_in:
             topology["og_file"] = str(Path(str(topology_file)).resolve())
             break
-        
+
     topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
@@ -344,7 +344,7 @@ def generateFppFile(toRebuild, topology_in):
     # )
 
     fileContent += FppWriter.FppTopology(topology_to_generate).open() + "\n"
-    
+
     if len(toRebuild["connections"]) == 0:
         fileContent += FppWriter.FppTopology(topology_to_generate).close() + "\n"
         fileContent += moduleClosures
@@ -364,15 +364,18 @@ def generateFppFile(toRebuild, topology_in):
     if len(toRebuild["connections"]) > 0:
         for connection in toRebuild["connections"]:
             preannot = connection.cg_preannot
-            
-            if connection.cg_name in toRebuild["locals"] and connection.cg_type != "Direct":
+
+            if (
+                connection.cg_name in toRebuild["locals"]
+                and connection.cg_type != "Direct"
+            ):
                 connection.cg_name = f"__{topology_to_generate}_instances.{connection.cg_name.split('.')[-1]}"
-                
+
             if preannot is not None and len(preannot) > 0:
                 if "! export" == preannot[0]:
                     PATTERNED_EXPORTS.append(connection)
                     continue
-                
+
             fileContent += connection.write() + "\n"
 
     fileContent += "}\n"
@@ -489,7 +492,7 @@ def main():
                     FPP_LOCS,
                     topologyName,
                     ST_INTERFACES[topology["qf"]],
-                    PATTERNED_EXPORTS
+                    PATTERNED_EXPORTS,
                 )
 
                 InterfaceBuilder.removeInterfaces(
@@ -498,13 +501,14 @@ def main():
                 InterfaceBuilder.removeInterfaces(
                     FPP_OUTPUT, ST_INTERFACES[topology["qf"]]
                 )
-                
-                removedTop = Utils.removeEmptyTopology(FPP_OUTPUT, f"{dirOfOutput}/../{filename}", FPP_LOCS, topology["qf"])
-                
-                
+
+                removedTop = Utils.removeEmptyTopology(
+                    FPP_OUTPUT, f"{dirOfOutput}/../{filename}", FPP_LOCS, topology["qf"]
+                )
+
                 if removedTop:
-                    REMOVED_TOPOLOGIES.append(topology['qf'].split(".")[-1])
-                
+                    REMOVED_TOPOLOGIES.append(topology["qf"].split(".")[-1])
+
                 newLocs = fpp.fpp_locate_defs(FPP_OUTPUT, FPP_LOCS)
                 Utils.writeFppFile(
                     f"{dirOfOutput}/st-locs.fpp",
@@ -519,7 +523,7 @@ def main():
                 FPP_OUTPUT,
                 [FPP_LOCS, f"{dirOfOutput}/st-locs.fpp"],
                 DEPENDENCY_REPLACE,
-                REMOVED_TOPOLOGIES
+                REMOVED_TOPOLOGIES,
             )
 
         TOPOLOGIES_TO_INSTANTIATE.clear()

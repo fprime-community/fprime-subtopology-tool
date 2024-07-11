@@ -459,7 +459,7 @@ class ConnectionGraphParser(ValueElements):
                 return f"param connections instance {self.cg_name}"
             elif self.cg_type == "TextEvent":
                 return f"text event connections instance {self.cg_name}"
-            
+
         part = f"connections {self.cg_name} {{"
 
         for connection in self.cg_connections:
@@ -483,11 +483,11 @@ class ConnectionGraphParser(ValueElements):
         import_bit = self.cg_JSON["SpecConnectionGraph"]["node"]["AstNode"]["data"]
 
         if "Direct" not in import_bit:
-            self.cg_type:dict = import_bit['Pattern']['kind']
+            self.cg_type: dict = import_bit["Pattern"]["kind"]
             self.cg_type = self.cg_type.keys()
             self.cg_type = list(self.cg_type)[0]
-            
-            self.cg_name = value_parser(import_bit["Pattern"]['source'])
+
+            self.cg_name = value_parser(import_bit["Pattern"]["source"])
             return
         else:
             self.cg_type = "Direct"
