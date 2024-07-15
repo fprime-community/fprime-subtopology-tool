@@ -252,8 +252,6 @@ def updateDependencies(
                 list(map(lambda x: removedTop + x, topologyGeneratedFilePostfixes))
             )
 
-            print(FilesToRemove)
-
         for file in dependencyFiles:
             with open(fpp_cache + "/tmp/" + file, "r") as f:
                 with open(fpp_cache + "/" + file, "a") as out:
@@ -282,12 +280,10 @@ def updateDependencies(
                     lineNeedsToBeRemoved = False
                     for removeSet in FilesToRemove:
                         for remove in removeSet:
-                            print(remove, line)
                             if remove in line:
                                 lineNeedsToBeRemoved = True
                                 break
 
-                    print(lineNeedsToBeRemoved)
                     if lineNeedsToBeRemoved:
                         continue
 
