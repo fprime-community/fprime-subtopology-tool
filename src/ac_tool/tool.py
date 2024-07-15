@@ -369,6 +369,8 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
     
     with open(hppFile, "w") as f:
         f.writelines(actLines)
+        
+    GENERATED_HPP_FILES.append(hppFile)
 
 def generateFppFile(toRebuild, topology_in):
     modules_to_generate = topology_in["qf"].split(".")
@@ -585,6 +587,9 @@ def main():
                 DEPENDENCY_REPLACE,
                 REMOVED_TOPOLOGIES,
             )
+            
+        with open(f"{dirOfOutput}/../GENERATED_FILES.txt", "w") as f:
+            f.write(" ".join(GENERATED_HPP_FILES))
 
         TOPOLOGIES_TO_INSTANTIATE.clear()
         WRITTEN_FILE_PIECES.clear()

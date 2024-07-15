@@ -27,6 +27,15 @@ function(subtopology_setup_autocode AC_INPUT_FILE)
     )
     
     if (RETURN_CODE EQUAL 0)
+        # read GENERATED_FILES.txt
+        file(STRINGS "${CMAKE_CURRENT_BINARY_DIR}/GENERATED_FILES.txt" GENERATED_FILES_ADDENDUM)
+        
+        if (CMAKE_DEBUG_OUTPUT)
+            message(STATUS "[Subtopology Ac] Extra generated files: ${GENERATED_FILES_ADDENDUM}")
+        endif()
+
+        list(APPEND GENERATED_FILES ${GENERATED_FILES_ADDENDUM})
+
         set(AUTOCODER_GENERATED "${GENERATED_FILES}" PARENT_SCOPE)
         set(AUTOCODER_REMOVED_SOURCES "${AC_INPUT_FILE}" PARENT_SCOPE)
     else()
