@@ -1,15 +1,8 @@
 import os
-import fpp_interface as fpp
 import fpp_json_ast_parser as Parser
 import fpp_writer as FppWriter
 import tool as MainTool
-import json
 import utils as Utils
-import shutil
-import argparse
-import sys
-from pathlib import Path
-
 
 def quickInterfaceCheck(pathToFile, topologyName):
     with open(pathToFile, "r") as f:

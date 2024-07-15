@@ -11,6 +11,7 @@ import interface_builder as InterfaceBuilder
 from pathlib import Path
 
 TOPOLOGIES_TO_INSTANTIATE = []
+GENERATED_HPP_FILES = []
 WRITTEN_FILE_PIECES = []
 ST_INTERFACES = {}
 FPP_AST_CACHE = []
@@ -181,6 +182,20 @@ def find_in_locs(locs, type, name):
 def setup_interface(topology):
     if topology not in ST_INTERFACES:
         ST_INTERFACES[topology] = {"in": None, "out": None}
+        
+def locate_topologydefs(file, topologyName):
+    theDir = os.path.dirname(file)
+    
+    if "." in topologyName:
+        topologyName = topologyName.split(".")[-1]
+    
+    if not os.path.isabs(theDir):
+        theDir = Path(theDir).resolve()
+        
+    for root, _, files in os.walk(theDir):
+        for file in files:
+            if f"{topologyName}TopologyDefs.hpp" in file:
+                return os.path.join(root, file)
 
 
 def topology_to_instance(topology_in):
@@ -193,7 +208,8 @@ def topology_to_instance(topology_in):
         if topology == topology_in:
             topology["og_file"] = str(Path(str(topology_file)).resolve())
             break
-
+    
+    topologydefs = locate_topologydefs(topology_file, topology_in["topology"])
     topology_file = openFppFile(topology_file, None, None)
 
     st_Class = Utils.module_walker(
@@ -307,8 +323,52 @@ def topology_to_instance(topology_in):
     ):
         toRebuild = Utils.replaceConfig(topology_in["configReplacement"], toRebuild)
 
+    generateHppFile(toRebuild, topology_in, topologydefs)
     generateFppFile(toRebuild, topology_in)
 
+def generateHppFile(toRebuild, topology_in, topologydefs):
+    print(f"[INFO] Generating HPP file for {topology_in['topology']}...")
+    
+    modules_to_generate = topology_in["qf"].split(".")
+    topology_to_generate = modules_to_generate.pop()
+    
+    if topologydefs is None:
+        print(f"[WARN] No TopologyDefs.hpp file found for {topology_in['topology']}. You may need to manually include this file in your project.")
+        return
+    
+    with open(topologydefs, "r") as f:
+        lines = f.readlines()
+        
+    actLines = []
+    
+    for line in lines:
+        if "ifndef" in line:
+            line = f"#ifndef {topology_to_generate.upper()}TOPOLOGYDEFS_HPP\n"
+        elif "define" in line:
+            line = f"#define {topology_to_generate.upper()}TOPOLOGYDEFS_HPP\n"
+        if "namespace " in line:
+            checkLine = line.strip()
+            namespace = checkLine.split(" ")[1]
+            
+            for instance in toRebuild['instances']:
+                if f"_{instance.instance_name.split('.')[-1]}" in namespace:
+                    line = line.replace(namespace, f"__{topology_to_generate}_instances_{instance.instance_name.split('.')[-1]}")
+                    break
+        
+        actLines.append(line)        
+        
+    outputDir = os.path.dirname(FPP_OUTPUT)
+    outputDir = os.path.dirname(outputDir)
+    hppFile = f"{outputDir}/{topology_to_generate}TopologyDefs.hpp"
+    
+    # create the file
+    try:
+        open(hppFile, "x").close()
+    except FileExistsError:
+        pass
+    
+    with open(hppFile, "w") as f:
+        f.writelines(actLines)
 
 def generateFppFile(toRebuild, topology_in):
     modules_to_generate = topology_in["qf"].split(".")
