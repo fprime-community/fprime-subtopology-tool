@@ -314,6 +314,9 @@ module MainDeployment {
 
 The last step is that in our `MainDeployment/Top` directory, we want to create a topology definitions file for our instantiated subtopology. Each subtopology instance requires its own instance, but it can be simplified to include parts from the subtopology's topology definitions file. This part was not automated as the user may want access to this header file to make modifications and add configuration changes on a case-by-case basis.
 
+> [!IMPORTANT]
+> With v1.1.1 of this tool, this step is no longer required. As long as the original subtopology's `TopologyDefs.hpp` is in the same folder as where the subtopology is defined, you do *not* need to create a new defs file for the instantiated subtopology.
+
 ```cpp
 
 // create TestingTopologyDefs.hpp in MainDeployment/Top
