@@ -419,6 +419,8 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
             code = component.instance_elements["phases"][phase]
 
             word = ""
+            stateFound = False
+            stateVar = ""
             for character in code:
                 if character in [
                     "\n",
@@ -436,9 +438,54 @@ def phase_rewriter(component: Parser.InstanceParser, topology_in):
                     if f"_{instance_name}" in word:
                         # we have found the function name
                         code = code.replace(word, new_function_name)
+                        word = ""
+                        continue
 
-                    word = ""
-                    break
+                    if "state" in word and stateFound == False:
+                        stateFound = True
+                        stateVar += "state"
+
+                        word = ""
+                        continue
+
+                    if (
+                        character
+                        in [
+                            "\n",
+                            "\t",
+                            " ",
+                            "(",
+                            ")",
+                            "{",
+                            "}",
+                            ";",
+                            ",",
+                            ":",
+                        ]
+                        and stateFound
+                    ):
+                        stateFound = False
+                        stateVar += "." + word
+                        continue
+
+                    if stateFound:
+                        stateVar += "." + word
+                        word = ""
+                        continue
+
+                    if stateFound == False and stateVar != "":
+                        splitted = stateVar.split(".")
+                        if stateVar[-1] == ".":
+                            splitted.pop()
+
+                        actualVariable = splitted[-1]
+                        newState = (
+                            f"state.st.{topology_to_generate}State.{actualVariable}"
+                        )
+
+                        code = code.replace(stateVar, newState)
+
+                        stateVar = ""
 
                 word += character
             component.instance_elements["phases"][phase] = code
@@ -503,3 +550,92 @@ def removeEmptyTopology(file, main_file, locs, topology):
         return 1
 
     return 0
+
+
+# def subtopologyStatesAPI(topName):
+#     return f"
+
+#     // SubtopologyStates API
+#     namespace {topName} {{
+#         void
+#     "
+
+
+def generateACStateStruct(hpp_files, topologies):
+    print("[INFO] Generating SubtopologyStates.hpp file...")
+    structTypes = []
+    dirToSave = hpp_files[0].split("/")[:-1]
+
+    pathToSave = "/".join(dirToSave) + "/SubtopologyStates.hpp"
+    
+    hppName = ""
+
+    for topology in topologies:
+        topName = topology["qf"].split(".")[-1]
+        oldTopName = topology["topology"].split(".")[-1]
+        
+        hppName = topology["qf"].split(".")[0]
+
+        for hpp_file in hpp_files:
+            if topName in hpp_file:
+                with open(hpp_file, "r") as f:
+                    lines = f.readlines()
+
+                for i in range(len(lines)):
+                    if f"struct {oldTopName}State" in lines[i]:
+                        structTypes.append(
+                            {
+                                "topology": topName,
+                                "struct": f"{oldTopName}State",
+                                "file": hpp_file,
+                            }
+                        )
+
+                        break
+
+    ifndef = f"#ifndef {hppName}SUBTOPOLOGY_STATES_HPP\n"
+    define = f"#define {hppName}SUBTOPOLOGY_STATES_HPP\n"
+    endif = f"\n#endif // {hppName}SUBTOPOLOGY_STATES_HPP\n"
+    
+    if len(structTypes) == 0:
+        struct = "struct SubtopologyStates {\n};"
+
+        with open(pathToSave, "w") as f:
+            f.write(ifndef)
+            f.write(define)
+            f.write(struct)
+            f.write(endif)
+
+        return 0
+
+    else:
+        hpp_files_include = []
+        struct = "struct SubtopologyStates {\n"
+
+        for structType in structTypes:
+            if len(structTypes) > 1:
+                for i in range(0, structTypes.index(structType)):
+                    if structType[i] == structType:
+                        pass
+                    elif structType["struct"] == structTypes[i]["struct"]:
+                        continue
+                
+            hpp_files_include.append(
+                f"#include \"{structType['file'].split('/')[-1]}\"" + "\n"
+            )
+
+            struct += structType["struct"] + f" {structType['topology']}State;\n"
+
+        struct += "};"
+
+        try:
+            with open(pathToSave, "w") as f:
+                f.write(ifndef)
+                f.write(define)
+                f.writelines(hpp_files_include)
+                f.write(struct)
+                f.write(endif)
+        except Exception as e:
+            raise Exception(f"[ERR] Failed to generate SubtopologyStates.hpp file: {e}")
+
+        return 0
