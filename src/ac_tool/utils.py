@@ -606,7 +606,7 @@ def generateACStateStruct(hpp_files, topologies):
             f.write(struct)
             f.write(endif)
 
-        return 0
+        return pathToSave
 
     else:
         hpp_files_include = []
@@ -638,4 +638,4 @@ def generateACStateStruct(hpp_files, topologies):
         except Exception as e:
             raise Exception(f"[ERR] Failed to generate SubtopologyStates.hpp file: {e}")
 
-        return 0
+        return pathToSave

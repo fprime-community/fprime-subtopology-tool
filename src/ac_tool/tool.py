@@ -588,7 +588,9 @@ def main():
                 DEPENDENCY_REPLACE.append({"from": topology["og_file"], "to": " NONE "})
 
         # generate ac state struct
-        Utils.generateACStateStruct(GENERATED_HPP_FILES, TOPOLOGIES_TO_INSTANTIATE)
+        acHppPath = Utils.generateACStateStruct(GENERATED_HPP_FILES, TOPOLOGIES_TO_INSTANTIATE)
+        
+        GENERATED_HPP_FILES.append(acHppPath)
 
         if not IN_TEST:
             Utils.updateDependencies(
@@ -614,7 +616,6 @@ def main():
     except Exception as e:
         print(str(e))
         cleanFppASTCache()
-        raise
         sys.exit(1)
 
 
