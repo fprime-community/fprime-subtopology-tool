@@ -4,6 +4,7 @@ import fpp_writer as FppWriter
 import tool as MainTool
 import utils as Utils
 
+
 def quickInterfaceCheck(pathToFile, topologyName):
     with open(pathToFile, "r") as f:
         fileContents = f.read()

@@ -82,6 +82,62 @@ topology ST {
 
 The `@! export` syntax applies to any patterned connection graph type. It also is especially useful if `Tlm` is defined as a local instance, as the syntax will ensure that the patterned connection graph name is renamed.
 
+### TopologyDefs.hpp
+
+While there is no specific special syntax for the TopologyDefs.hpp file, you can add state to your subtopology so that you can pass parameters into your subtopology. In a normal topology, you can see this struct defined in the `TopologyDefs.hpp`. 
+
+To get access to state for each subtopology *instance*, create your subtopology `TopologyDefs.hpp`, and in it create a struct called `<subtopology>State`. This naming structure is **mandatory** for the autocoder to locate your state struct. So, if your subtopology is called "RNG", then your TopologyDefs.hpp may look like:
+
+```cpp
+#ifndef RNGTOPOLOGY_DEFS_HPP
+#define RNGTOPOLOGY_DEFS_HPP
+
+
+struct RNGState { // <subtopology>State
+    U32 initialSeed;
+};
+
+namespace Globals
+{
+    namespace PingEntries
+    {
+        namespace RNGTopology_rng
+        {
+            enum
+            {
+                WARN = 3,
+                FATAL = 5
+            };
+        }
+    }
+}
+
+#endif
+```
+
+Lastly, in your *main deployment* TopologyDefs.hpp, you need to include a header file called "SubtopologyStates", which includes a concatenated list of all of the state structs for each subtopology instance in your main deployment. So, your main deployment TopologyDefs.hpp may look like:
+
+```cpp
+// assume your main deployment is called "MainDeployment"
+#include "MainDeployment/Top/SubtopologyStates.hpp" // include
+
+namespace MainDeployment {
+
+    // ...
+
+    struct TopologyState {
+        const CHAR* hostname;
+        U16 port;
+        SubtopologyStates st; // convention is to name the struct "st"
+    };
+
+    // ...
+
+}
+```
+
+You can now access state for any subtopology instance. Say your subtopology *instance* is called "TestInst". It's state can be accessed by `TopologyState.st.TestInst`, which has the type of the state struct of the subtopology it is instanced from.
+
 ## In the main topology
 
 In the main topology, we want to be able to define that we want to use our subtopology. Following the above example, `Main.ST` is our subtopology. The following is the syntax to define a subtopology instance in your main deployment's topology fpp file:
