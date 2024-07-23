@@ -567,13 +567,13 @@ def generateACStateStruct(hpp_files, topologies):
     dirToSave = hpp_files[0].split("/")[:-1]
 
     pathToSave = "/".join(dirToSave) + "/SubtopologyStates.hpp"
-    
+
     hppName = ""
 
     for topology in topologies:
         topName = topology["qf"].split(".")[-1]
         oldTopName = topology["topology"].split(".")[-1]
-        
+
         hppName = topology["qf"].split(".")[0]
 
         for hpp_file in hpp_files:
@@ -596,7 +596,7 @@ def generateACStateStruct(hpp_files, topologies):
     ifndef = f"#ifndef {hppName}SUBTOPOLOGY_STATES_HPP\n"
     define = f"#define {hppName}SUBTOPOLOGY_STATES_HPP\n"
     endif = f"\n#endif // {hppName}SUBTOPOLOGY_STATES_HPP\n"
-    
+
     if len(structTypes) == 0:
         struct = "struct SubtopologyStates {\n};"
 
@@ -619,7 +619,7 @@ def generateACStateStruct(hpp_files, topologies):
                         pass
                     elif structType["struct"] == structTypes[i]["struct"]:
                         continue
-                
+
             hpp_files_include.append(
                 f"#include \"{structType['file'].split('/')[-1]}\"" + "\n"
             )
