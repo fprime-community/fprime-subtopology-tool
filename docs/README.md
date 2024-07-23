@@ -6,7 +6,7 @@
 
 ## Documentation
 
-- [Syntax.md](./Syntax.md) - information about syntax in fpp files for this tool
+- [Syntax.md](./Syntax.md) - information about syntax in fpp files for this tool, as well as TopologyDefs.hpp
 - [Example.md](./Example.md) - documentation for an example project that uses this tool
 - [Design.md](./Design.md) - design methodology for this tool
 - [Interfaces.md](./Interfaces.md) - design and implementation of formal subtopology interfaces

@@ -153,6 +153,10 @@ As you may see, we see our magic annotations finally show up, with `rng` being d
 
 The last step is to fill in out `RNGTopologyTopologyDefs.hpp` file, which will include the topology state struct that you can see is in our phase. It also could include any other definitions that may be required for our subtopology.
 
+> [!IMPORTANT]
+> The struct for your state for your subtopology should be called `<subtopology>State`. This is *mandatory* for the autocoder to find it.
+
+
 ```cpp
 
 // in RNGTopologyTopologyDefs.hpp
@@ -160,15 +164,23 @@ The last step is to fill in out `RNGTopologyTopologyDefs.hpp` file, which will i
 #ifndef RNGTOPOLOGY_DEFS_HPP
 #define RNGTOPOLOGY_DEFS_HPP
 
-namespace RNGTopology
-{
-    struct RNGTopologyState {
-        U32 initialSeed;
-    };
+struct RNGTopologyState {
+    U32 initialSeed;
+};
 
-    struct TopologyState {
-        RNGTopologyState RNGTopology_state;
-    };
+namespace Globals
+{
+    namespace PingEntries
+    {
+        namespace RNGTopology_rng
+        {
+            enum
+            {
+                WARN = 3,
+                FATAL = 5
+            };
+        }
+    }
 }
 
 #endif
