@@ -332,6 +332,7 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
     print(f"[INFO] Generating HPP file for {topology_in['topology']}...")
 
     modules_to_generate = topology_in["qf"].split(".")
+    main_module = modules_to_generate[0]
     topology_to_generate = modules_to_generate.pop()
 
     if topologydefs is None:
@@ -344,6 +345,12 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
         lines = f.readlines()
 
     actLines = []
+    
+    # TODO: This isn't dynamic enough. Need to find a way to make this more dynamic    
+    importPath = f"{main_module}/Top/{main_module}TopologyDefs.hpp"
+    
+    importName = f'#include "{importPath}"\n'
+    namespaceName = f"using namespace {main_module};\n"
 
     for line in lines:
         if "ifndef" in line:
@@ -363,6 +370,9 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
                     break
 
         actLines.append(line)
+        
+    actLines.insert(0, importName)
+    actLines.insert(1, namespaceName)
 
     outputDir = os.path.dirname(FPP_OUTPUT)
     outputDir = os.path.dirname(outputDir)
