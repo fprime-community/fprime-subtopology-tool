@@ -345,10 +345,10 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
         lines = f.readlines()
 
     actLines = []
-    
-    # TODO: This isn't dynamic enough. Need to find a way to make this more dynamic    
+
+    # TODO: This isn't dynamic enough. Need to find a way to make this more dynamic
     importPath = f"{main_module}/Top/{main_module}TopologyDefs.hpp"
-    
+
     importName = f'#include "{importPath}"\n'
     namespaceName = f"using namespace {main_module};\n"
 
@@ -370,7 +370,7 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
                     break
 
         actLines.append(line)
-        
+
     actLines.insert(0, importName)
     actLines.insert(1, namespaceName)
 
