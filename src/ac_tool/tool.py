@@ -349,8 +349,8 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
     # TODO: This isn't dynamic enough. Need to find a way to make this more dynamic
     importPath = f"{main_module}/Top/{main_module}TopologyDefs.hpp"
 
-    importName = f'#include "{importPath}"\n'
-    namespaceName = f"using namespace {main_module};\n"
+    importName = f'#include "{importPath}"\n\n'
+    forwardDeclaration = f"namespace {main_module} {{ struct TopologyState; }}\nusing TopologyState = {main_module}::TopologyState;\n\n"
 
     for line in lines:
         if "ifndef" in line:
@@ -372,7 +372,7 @@ def generateHppFile(toRebuild, topology_in, topologydefs):
         actLines.append(line)
 
     actLines.insert(0, importName)
-    actLines.insert(1, namespaceName)
+    actLines.insert(1, forwardDeclaration)
 
     outputDir = os.path.dirname(FPP_OUTPUT)
     outputDir = os.path.dirname(outputDir)
