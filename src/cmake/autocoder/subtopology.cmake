@@ -18,11 +18,11 @@ function(subtopology_setup_autocode AC_INPUT_FILE)
     set(GENERATED_FILES "${CMAKE_CURRENT_BINARY_DIR}/ST/${FPRIME_CURRENT_MODULE}.subtopologies.fpp" "${CMAKE_CURRENT_BINARY_DIR}/ST/st-locs.fpp" "${CMAKE_CURRENT_BINARY_DIR}/${BASENAME}")
 
     if (CMAKE_DEBUG_OUTPUT)
-        message(STATUS "[Subtopology Ac] CLI: ${PYTHON} ${PYTHON_TOOL} --locs ${CMAKE_BINARY_DIR}/locs.fpp --file ${AC_INPUT_FILE} --p ${OUTPUT_FILE} --c ${LOCAL_CACHE}")
+        message(STATUS "[Subtopology Ac] CLI: ${PYTHON} ${PYTHON_TOOL} --locs ${CMAKE_BINARY_DIR}/locs.fpp --file ${AC_INPUT_FILE} --p ${OUTPUT_FILE} --c ${LOCAL_CACHE} --r ${FPRIME_PROJECT_ROOT}")
     endif()
 
     execute_process(
-        COMMAND ${PYTHON} ${PYTHON_TOOL} --locs ${CMAKE_BINARY_DIR}/locs.fpp --file ${AC_INPUT_FILE} --p ${OUTPUT_FILE} --c ${LOCAL_CACHE}
+        COMMAND ${PYTHON} ${PYTHON_TOOL} --locs ${CMAKE_BINARY_DIR}/locs.fpp --file ${AC_INPUT_FILE} --p ${OUTPUT_FILE} --c ${LOCAL_CACHE} --r ${FPRIME_PROJECT_ROOT}
         RESULT_VARIABLE RETURN_CODE
     )
     

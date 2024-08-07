@@ -497,6 +497,13 @@ def main():
         help="bypasses dependency management for testing",
         action=argparse.BooleanOptionalAction,
     )
+    
+    parser.add_argument(
+        "--r",
+        "--root",
+        help="path to root directory",
+        required=False,
+    )
 
     parsed, _ = parser.parse_known_args()
 
@@ -505,12 +512,14 @@ def main():
     global FPP_CACHE
     global FPP_INPUT
     global IN_TEST
+    global FPRIME_ROOT
 
     FPP_LOCS = parsed.locs
     FPP_OUTPUT = parsed.p
     FPP_CACHE = parsed.c
     FPP_INPUT = parsed.f
     IN_TEST = parsed.t or False
+    FPRIME_ROOT = parsed.r or False
 
     if not os.path.isabs(FPP_LOCS):
         FPP_LOCS = Path(FPP_LOCS).resolve()
